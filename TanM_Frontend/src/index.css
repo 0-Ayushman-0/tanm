@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Core Palette (matches new design) ─────────────────────── */
+  --color-primary:                  #271310;
+  --color-primary-container:        #3e2723;
+  --color-primary-fixed:            #ffdad4;
+  --color-primary-fixed-dim:        #e3beb8;
+  --color-on-primary:               #ffffff;
+  --color-on-primary-container:     #ae8d87;
+  --color-inverse-primary:          #e3beb8;
+
+  --color-secondary:                #805533;
+  --color-secondary-container:      #fdc39a;
+  --color-secondary-fixed:          #ffdcc5;
+  --color-secondary-fixed-dim:      #f4bb92;
+  --color-on-secondary:             #ffffff;
+  --color-on-secondary-container:   #794e2e;
+
+  --color-tertiary:                 #181817;
+  --color-tertiary-container:       #2d2d2b;
+  --color-on-tertiary:              #ffffff;
+  --color-on-tertiary-container:    #969492;
+
+  --color-surface:                  #fcf9f8;
+  --color-surface-dim:              #dcd9d9;
+  --color-surface-bright:           #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low:    #f6f3f2;
+  --color-surface-container:        #f0eded;
+  --color-surface-container-high:   #eae7e7;
+  --color-surface-container-highest:#e5e2e1;
+  --color-surface-variant:          #e5e2e1;
+  --color-surface-tint:             #745853;
+  --color-background:               #fcf9f8;
+  --color-inverse-surface:          #303030;
+  --color-inverse-on-surface:       #f3f0ef;
+
+  --color-on-surface:               #1b1b1c;
+  --color-on-surface-variant:       #504442;
+  --color-on-background:            #1b1b1c;
+
+  --color-outline:                  #827472;
+  --color-outline-variant:          #d3c3c0;
+
+  --color-error:                    #ba1a1a;
+  --color-error-container:          #ffdad6;
+  --color-on-error:                 #ffffff;
+  --color-on-error-container:       #93000a;
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --spacing-unit:                   8px;
+  --spacing-stack-sm:               8px;
+  --spacing-stack-md:               16px;
+  --spacing-stack-lg:               32px;
+  --spacing-gutter:                 24px;
+  --spacing-section-gap:            120px;
+  --spacing-container-max:          1280px;
+  --spacing-margin-mobile:          20px;
+  --spacing-margin-desktop:         64px;
+  --spacing-edge-margin-mobile:     20px;
+  --spacing-edge-margin-desktop:    64px;
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --font-display-lg:    "Playfair Display", serif;
+  --font-headline-lg:   "Playfair Display", serif;
+  --font-headline-md:   "Playfair Display", serif;
+  --font-label-md:      "Inter", sans-serif;
+  --font-label-sm:      "Inter", sans-serif;
+  --font-body-md:       "Inter", sans-serif;
+  --font-body-lg:       "Inter", sans-serif;
+  --font-caption:       "Inter", sans-serif;
+}
+
+body {
+  background-color: #fcf9f8;
+  color: #1b1b1c;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  font-family: "Inter", sans-serif;
+}
+
+/* ── Material Icons ───────────────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ── Hero Zoom Animation ──────────────────────────────────────── */
+.hero-zoom {
+  animation: slowZoom 30s ease-out infinite alternate;
+}
+@keyframes slowZoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.15); }
+}
+
+/* ── Hover Lift ───────────────────────────────────────────────── */
+.hover-lift {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-lift:hover {
+  transform: translateY(-8px);
+}
+
+/* ── Reveal on Scroll ─────────────────────────────────────────── */
+.reveal-item {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-item.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar       { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #827472; border-radius: 10px; }
+
+/* ── Misc Utilities ───────────────────────────────────────────── */
+.luxury-blur    { backdrop-filter: blur(30px); }
+.parallax-bg    { background-attachment: fixed; background-position: center; background-repeat: no-repeat; background-size: cover; will-change: transform; }
+.chart-gradient { background: linear-gradient(180deg, rgba(39,19,16,0.1) 0%, rgba(39,19,16,0) 100%); }
