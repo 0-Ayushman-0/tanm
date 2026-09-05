@@ -84,6 +84,16 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
+  requestPasswordReset: (email) =>
+    apiCall('/auth/password-reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  confirmPasswordReset: (email, otpCode, newPassword) =>
+    apiCall('/auth/password-reset/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ email, otpCode, newPassword }),
+    }),
   devBypass: (email) =>
     apiCall(`/auth/dev-bypass?email=${encodeURIComponent(email)}`, {
       method: 'POST',

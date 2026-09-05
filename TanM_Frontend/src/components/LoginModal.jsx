@@ -2,14 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { authApi } from '../api';
 
 // ── Tabs ────────────────────────────────────────────────────────
-const TABS = { LOGIN: 'login', REGISTER: 'register', OTP: 'otp' };
+const TABS = {
+  LOGIN: 'login',
+  REGISTER: 'register',
+  OTP: 'otp',
+  FORGOT_REQUEST: 'forgot_request',
+  FORGOT_CONFIRM: 'forgot_confirm',
+};
 
 // ── Stable sub-components (MUST be outside LoginModal) ──────────
 const EyeToggle = ({ show, onToggle }) => (
   <button
     type="button"
     onClick={onToggle}
-    className="absolute right-0 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors"
+    className="absolute right-0 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors cursor-pointer"
   >
     <span className="material-symbols-outlined text-[18px]">{show ? 'visibility_off' : 'visibility'}</span>
   </button>
@@ -53,10 +59,19 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [regPassword, setRegPassword] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
 
-  // OTP
+  // OTP (Registration verification)
   const [otpEmail, setOtpEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef([]);
+
+  // Forgot / Reset Password fields
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmNewPw, setShowConfirmNewPw] = useState(false);
+  const resetOtpRefs = useRef([]);
 
   // Reset state on open/close
   useEffect(() => {
@@ -65,6 +80,9 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
       setError('');
       setSuccess('');
       setOtp(['', '', '', '', '', '']);
+      setResetOtp(['', '', '', '', '', '']);
+      setNewPassword('');
+      setConfirmNewPassword('');
     }
   }, [isOpen]);
 
@@ -148,6 +166,86 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     }
   };
 
+  // ── Forgot Password Handlers ────────────────────────────────
+  const handleForgotPasswordRequest = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      setError('Please enter your registered email address.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.requestPasswordReset(forgotEmail);
+      setSuccess('If that email is registered, you will receive a 6-digit reset code shortly.');
+      setResetOtp(['', '', '', '', '', '']);
+      setTab(TABS.FORGOT_CONFIRM);
+    } catch (err) {
+      setError(err.message || 'Failed to send reset code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetOtpChange = (val, idx) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...resetOtp];
+    next[idx] = val;
+    setResetOtp(next);
+    if (val && idx < 5) resetOtpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleResetOtpKeyDown = (e, idx) => {
+    if (e.key === 'Backspace' && !resetOtp[idx] && idx > 0) {
+      resetOtpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  const handleForgotPasswordConfirm = async (e) => {
+    e.preventDefault();
+    const code = resetOtp.join('');
+    if (code.length < 6) {
+      setError('Please enter the full 6-digit verification code.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.confirmPasswordReset(forgotEmail, code, newPassword);
+      setSuccess('Password changed successfully! Please sign in with your new password.');
+      setLoginEmail(forgotEmail);
+      setLoginPassword('');
+      setTab(TABS.LOGIN);
+    } catch (err) {
+      setError(err.message || 'Failed to reset password. Invalid or expired OTP.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendResetCode = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.requestPasswordReset(forgotEmail);
+      setSuccess('A new reset code has been sent to your email.');
+      setResetOtp(['', '', '', '', '', '']);
+    } catch (err) {
+      setError(err.message || 'Failed to resend code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       {/* Backdrop - prevents closing on outside click */}
@@ -165,7 +263,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               className="h-16 w-auto object-contain mb-2 filter drop-shadow-sm"
             />
             <p className="text-sm font-bold uppercase tracking-[0.32em] text-white">tanm</p>
-            {/* <p className="text-[10px] uppercase tracking-[0.25em] text-white/60 mt-0.5">Atelier</p> */}
           </div>
           <div className="space-y-4">
             {[['workspace_premium', 'Premium Quality'], ['favorite', 'Curated for You'], ['lock', 'Secure Account']].map(([icon, text]) => (
@@ -186,19 +283,19 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
           {/* Close */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-20"
+            className="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-20 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
 
-          {/* Tab switcher — not shown on OTP step */}
-          {tab !== TABS.OTP && (
+          {/* Tab switcher — not shown on OTP or Forgot Password steps */}
+          {tab !== TABS.OTP && tab !== TABS.FORGOT_REQUEST && tab !== TABS.FORGOT_CONFIRM && (
             <div className="flex border-b border-outline-variant/30 mb-8">
               {[TABS.LOGIN, TABS.REGISTER].map((t) => (
                 <button
                   key={t}
                   onClick={() => { setTab(t); setError(''); setSuccess(''); }}
-                  className={`pb-3 mr-6 text-xs font-bold uppercase tracking-widest transition-colors border-b-2 -mb-[1px]
+                  className={`pb-3 mr-6 text-xs font-bold uppercase tracking-widest transition-colors border-b-2 -mb-[1px] cursor-pointer
                     ${tab === t ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-primary'}`}
                 >
                   {t === TABS.LOGIN ? 'Sign In' : 'Register'}
@@ -248,7 +345,16 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               />
 
               <div className="flex justify-end -mt-2">
-                <button type="button" className="text-[11px] text-on-surface-variant hover:text-primary transition-colors">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotEmail(loginEmail || '');
+                    setError('');
+                    setSuccess('');
+                    setTab(TABS.FORGOT_REQUEST);
+                  }}
+                  className="text-[11px] text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                >
                   Forgot password?
                 </button>
               </div>
@@ -256,7 +362,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-auto bg-primary text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="mt-auto bg-primary text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
                 {loading ? 'Signing In…' : 'Sign In'}
@@ -264,7 +370,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
               <p className="text-[11px] text-center text-on-surface-variant">
                 New to TanM?{' '}
-                <button type="button" onClick={() => setTab(TABS.REGISTER)} className="text-primary font-bold hover:opacity-70 transition-opacity">
+                <button type="button" onClick={() => setTab(TABS.REGISTER)} className="text-primary font-bold hover:opacity-70 transition-opacity cursor-pointer">
                   Create an account
                 </button>
               </p>
@@ -304,7 +410,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-auto bg-primary text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="mt-auto bg-primary text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
                 {loading ? 'Creating Account…' : 'Create Account'}
@@ -312,14 +418,14 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
               <p className="text-[11px] text-center text-on-surface-variant">
                 Already a member?{' '}
-                <button type="button" onClick={() => setTab(TABS.LOGIN)} className="text-primary font-bold hover:opacity-70 transition-opacity">
+                <button type="button" onClick={() => setTab(TABS.LOGIN)} className="text-primary font-bold hover:opacity-70 transition-opacity cursor-pointer">
                   Sign in
                 </button>
               </p>
             </form>
           )}
 
-          {/* ── OTP VERIFICATION ── */}
+          {/* ── OTP VERIFICATION (Register) ── */}
           {tab === TABS.OTP && (
             <form onSubmit={handleVerify} className="flex flex-col gap-6 flex-1">
               <div className="text-center">
@@ -355,7 +461,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               <button
                 type="submit"
                 disabled={loading || otp.join('').length < 6}
-                className="bg-primary text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="bg-primary text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
                 {loading ? 'Verifying…' : 'Verify & Sign In'}
@@ -365,7 +471,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 type="button"
                 onClick={handleDevBypass}
                 disabled={loading}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 rounded shadow-sm"
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 rounded shadow-sm cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">bolt</span>
                 ⚡ Bypass Email Verification
@@ -375,7 +481,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 Didn't receive it?{' '}
                 <button
                   type="button"
-                  className="text-primary font-bold hover:opacity-70 transition-opacity"
+                  className="text-primary font-bold hover:opacity-70 transition-opacity cursor-pointer"
                   onClick={() => { setOtp(['', '', '', '', '', '']); setError(''); }}
                 >
                   Resend Code
@@ -383,6 +489,139 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               </p>
             </form>
           )}
+
+          {/* ── FORGOT PASSWORD: REQUEST STEP ── */}
+          {tab === TABS.FORGOT_REQUEST && (
+            <form onSubmit={handleForgotPasswordRequest} className="flex flex-col gap-6 flex-1">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => { setTab(TABS.LOGIN); setError(''); setSuccess(''); }}
+                  className="flex items-center gap-1 text-[11px] text-on-surface-variant hover:text-primary transition-colors mb-4 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  Back to Sign In
+                </button>
+                <h2 className="font-display-lg text-2xl text-primary">Reset Password</h2>
+                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                  Enter your registered email address and we'll send you a 6-digit code to reset your password.
+                </p>
+              </div>
+
+              <InputField
+                label="Email Address"
+                type="email"
+                value={forgotEmail}
+                onChange={setForgotEmail}
+                placeholder="you@example.com"
+                autoFocus
+              />
+
+              <button
+                type="submit"
+                disabled={loading || !forgotEmail}
+                className="mt-auto bg-primary text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
+                {loading ? 'Sending Code…' : 'Send Reset Code'}
+              </button>
+
+              <p className="text-[11px] text-center text-on-surface-variant">
+                Remember your password?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setTab(TABS.LOGIN); setError(''); setSuccess(''); }}
+                  className="text-primary font-bold hover:opacity-70 transition-opacity cursor-pointer"
+                >
+                  Sign In
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* ── FORGOT PASSWORD: CONFIRM STEP ── */}
+          {tab === TABS.FORGOT_CONFIRM && (
+            <form onSubmit={handleForgotPasswordConfirm} className="flex flex-col gap-4 flex-1">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => { setTab(TABS.FORGOT_REQUEST); setError(''); setSuccess(''); }}
+                  className="flex items-center gap-1 text-[11px] text-on-surface-variant hover:text-primary transition-colors mb-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  Change email
+                </button>
+                <h2 className="font-display-lg text-xl text-primary">Create New Password</h2>
+                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
+                  Enter the 6-digit code sent to <span className="font-bold text-primary">{forgotEmail}</span>
+                </p>
+              </div>
+
+              {/* 6-digit OTP boxes */}
+              <div className="flex justify-center gap-2 my-1">
+                {resetOtp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => (resetOtpRefs.current[i] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleResetOtpChange(e.target.value, i)}
+                    onKeyDown={(e) => handleResetOtpKeyDown(e, i)}
+                    className={`w-10 h-12 text-center text-lg font-bold border-2 bg-transparent outline-none transition-colors
+                      ${digit ? 'border-primary text-primary' : 'border-outline-variant text-on-surface'}
+                      focus:border-primary`}
+                  />
+                ))}
+              </div>
+
+              <InputField
+                label="New Password"
+                type={showNewPw ? 'text' : 'password'}
+                value={newPassword}
+                onChange={setNewPassword}
+                placeholder="Min 8 characters"
+                suffix={<EyeToggle show={showNewPw} onToggle={() => setShowNewPw(!showNewPw)} />}
+              />
+
+              <InputField
+                label="Confirm New Password"
+                type={showConfirmNewPw ? 'text' : 'password'}
+                value={confirmNewPassword}
+                onChange={setConfirmNewPassword}
+                placeholder="Confirm password"
+                suffix={<EyeToggle show={showConfirmNewPw} onToggle={() => setShowConfirmNewPw(!showConfirmNewPw)} />}
+              />
+
+              <button
+                type="submit"
+                disabled={loading || resetOtp.join('').length < 6 || !newPassword || !confirmNewPassword}
+                className="mt-2 bg-primary text-white py-3.5 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
+                {loading ? 'Resetting Password…' : 'Reset Password'}
+              </button>
+
+              <div className="flex justify-between items-center text-[11px] text-on-surface-variant pt-1">
+                <button
+                  type="button"
+                  onClick={handleResendResetCode}
+                  className="text-primary font-bold hover:opacity-70 transition-opacity cursor-pointer"
+                >
+                  Resend Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setTab(TABS.LOGIN); setError(''); setSuccess(''); }}
+                  className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </form>
+          )}
+
         </div>
       </div>
     </div>
