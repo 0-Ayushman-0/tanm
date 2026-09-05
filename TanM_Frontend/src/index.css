@@ -2,8 +2,8 @@
 
 @theme {
   /* ── Core Palette (matches new design) ─────────────────────── */
-  --color-primary:                  #271310;
-  --color-primary-container:        #3e2723;
+  --color-primary:                  #000000;
+  --color-primary-container:        #000000;
   --color-primary-fixed:            #ffdad4;
   --color-primary-fixed-dim:        #e3beb8;
   --color-on-primary:               #ffffff;

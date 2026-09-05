@@ -75,8 +75,8 @@ export default function Home({ onSelectProduct, onNavigate }) {
   }, [loading]);
 
   // Bento: first product is large (col-span-8), rest are small
-  const bentoLarge  = featuredProducts[0] || null;
-  const bentoSmall  = featuredProducts.slice(1, 3);
+  const bentoLarge = featuredProducts[0] || null;
+  const bentoSmall = featuredProducts.slice(1, 3);
 
   return (
     <div className="bg-background text-on-background">
@@ -101,7 +101,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
           <div className="flex gap-stack-md justify-center flex-wrap">
             <button
               onClick={() => onNavigate('shop')}
-              className="bg-primary-container text-white px-10 py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary transition-all duration-300 border border-primary-container"
+              className="bg-black text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] border border-black hover:bg-white hover:text-black hover:shadow-2xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 cursor-pointer"
             >
               Explore Collection
             </button>
@@ -109,7 +109,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
               onClick={() => {
                 document.getElementById('brand-story')?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="bg-transparent text-white px-10 py-4 text-xs font-bold uppercase tracking-widest border border-white hover:bg-white hover:text-primary transition-all duration-300"
+              className="bg-black/60 backdrop-blur-md text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] border border-white/60 hover:bg-white hover:text-black hover:border-white hover:shadow-2xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 cursor-pointer"
             >
               Our Story
             </button>
@@ -138,7 +138,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
 
           {/* Copy */}
           <div className="space-y-6 reveal-item">
-            <span className="text-xs font-bold uppercase tracking-[0.3em] text-secondary">Our Philosophy</span>
+            <span className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Our Philosophy</span>
             <h2 className="font-display-lg text-4xl md:text-5xl leading-tight text-primary">The Craft of Patience</h2>
             <p className="text-base text-on-surface-variant leading-relaxed max-w-lg">
               In an era of fleeting trends, TanM stands for the permanent. Each piece is born from a dialogue between artisan and material — a process that cannot be rushed, only perfected through decades of heritage techniques and singular focus.
@@ -153,7 +153,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
             </div>
             <button
               onClick={() => onNavigate('shop')}
-              className="inline-block border-b-2 border-primary pb-1 text-xs font-bold uppercase tracking-widest text-primary hover:opacity-60 transition-opacity"
+              className="inline-block border-b-2 border-primary pb-1 text-xs font-bold uppercase tracking-widest text-primary hover:text-secondary hover:border-secondary transition-all cursor-pointer"
             >
               Discover the Atelier →
             </button>
@@ -168,7 +168,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
             <h2 className="font-display-lg text-3xl text-primary">Signature Collections</h2>
             <button
               onClick={() => onNavigate('shop')}
-              className="text-xs font-bold uppercase tracking-widest text-secondary hover:text-primary transition-colors"
+              className="text-xs font-bold uppercase tracking-widest text-primary hover:text-secondary transition-colors cursor-pointer"
             >
               View All →
             </button>
@@ -237,7 +237,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
                   <p className="text-sm opacity-80 mb-3">{bentoLarge.leatherType || 'Full Grain Leather'}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-semibold">{fmt(bentoLarge.price)}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest border border-white px-4 py-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <span className="text-[10px] font-bold uppercase tracking-widest border border-white px-4 py-2 opacity-0 group-hover:opacity-100 hover:bg-white hover:text-black transition-all duration-300">
                       View Details
                     </span>
                   </div>
@@ -264,7 +264,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <button className="bg-white text-primary px-6 py-3 text-[10px] font-bold uppercase tracking-widest">
+                  <button className="bg-white text-primary hover:bg-black hover:text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer">
                     Shop Now
                   </button>
                 </div>
@@ -280,7 +280,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
         <div className="text-center mt-12 reveal-item">
           <button
             onClick={() => onNavigate('shop')}
-            className="border border-primary text-primary px-12 py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all duration-300"
+            className="border border-primary text-primary px-12 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-primary hover:text-white hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
           >
             View Full Collection
           </button>
@@ -362,7 +362,7 @@ export default function Home({ onSelectProduct, onNavigate }) {
             />
             <button
               type="submit"
-              className="bg-primary text-white px-12 py-4 text-xs font-bold uppercase tracking-widest hover:bg-primary-container transition-colors"
+              className="bg-primary text-white px-12 py-4 text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               Subscribe
             </button>

@@ -550,11 +550,14 @@ export default function AdminPortal() {
       <aside className="h-screen w-72 fixed left-0 top-0 overflow-y-auto bg-surface border-r border-outline-variant/20 z-50 py-8 px-6 flex flex-col justify-between">
         <div className="space-y-8 text-left">
           {/* Brand Header */}
-          <div className="space-y-1">
-            <h1 className="font-display-lg text-2xl text-primary tracking-tight font-bold">Artisan Admin</h1>
-            <p className="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-widest opacity-70">
-              Luxury Leather Goods
-            </p>
+          <div className="flex items-center gap-3">
+            <img src="/logo-transparent.png" alt="TanM" className="h-10 w-auto object-contain" />
+            <div>
+              <h1 className="font-display-lg text-lg text-primary tracking-tight font-bold leading-tight">TanM Atelier</h1>
+              <p className="font-label-sm text-[9px] text-on-surface-variant uppercase tracking-widest opacity-70">
+                Admin Suite
+              </p>
+            </div>
           </div>
 
           {/* Quick Action CTA */}

@@ -4,7 +4,7 @@ import { authApi, orderApi } from '../api';
 export default function UserProfile({ user, onUpdateUser }) {
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  
+
   // Profile update form
   const [profileForm, setProfileForm] = useState({
     firstName: user?.firstName || '',
@@ -94,10 +94,10 @@ export default function UserProfile({ user, onUpdateUser }) {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start text-xs">
-        
+
         {/* Left Column: Profile Settings (4 cols) */}
         <section className="lg:col-span-4 space-y-8 font-medium">
-          
+
           {/* Profile details form */}
           <div className="bg-surface-container p-6 rounded border border-outline-variant/15 space-y-4">
             <h2 className="font-headline-md text-base text-primary font-bold">Personal Particulars</h2>
@@ -180,7 +180,7 @@ export default function UserProfile({ user, onUpdateUser }) {
         {/* Right Column: Order History & Tracking Timelines (8 cols) */}
         <section className="lg:col-span-8 bg-surface-container p-8 rounded border border-outline-variant/15 space-y-6">
           <h2 className="font-headline-md text-lg text-primary font-bold">Purchase Archive</h2>
-          
+
           {loadingOrders ? (
             <p className="text-center py-12 text-on-surface-variant font-semibold">Loading archives...</p>
           ) : orders.length === 0 ? (
@@ -232,7 +232,7 @@ export default function UserProfile({ user, onUpdateUser }) {
       {selectedOrderDetails && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex justify-center items-center p-4">
           <div className="bg-surface w-full max-w-lg rounded-lg shadow-2xl p-8 border border-outline-variant/20 relative max-h-[85vh] overflow-y-auto text-xs">
-            
+
             <button
               onClick={() => setSelectedOrderDetails(null)}
               className="absolute top-6 right-6 text-on-surface hover:text-primary transition-colors"

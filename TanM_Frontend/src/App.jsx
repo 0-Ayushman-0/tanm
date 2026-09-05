@@ -160,12 +160,6 @@ function App() {
       <Footer />
 
       {/* Modals & Dialog Drawers */}
-      <LoginModal
-        isOpen={loginOpen}
-        onClose={() => setLoginOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
       <SearchModal
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
@@ -203,6 +197,12 @@ function App() {
         }}
         user={user}
         onOpenLogin={() => setLoginOpen(true)}
+      />
+
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
 
     </div>

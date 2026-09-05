@@ -36,27 +36,27 @@ const InputField = ({ label, type = 'text', value, onChange, placeholder, autoFo
 );
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
-  const [tab, setTab]               = useState(TABS.LOGIN);
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState('');
-  const [success, setSuccess]       = useState('');
+  const [tab, setTab] = useState(TABS.LOGIN);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   // Login fields
-  const [loginEmail, setLoginEmail]       = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [showLoginPw, setShowLoginPw]     = useState(false);
+  const [showLoginPw, setShowLoginPw] = useState(false);
 
   // Register fields
-  const [regFirst, setRegFirst]       = useState('');
-  const [regLast, setRegLast]         = useState('');
-  const [regEmail, setRegEmail]       = useState('');
+  const [regFirst, setRegFirst] = useState('');
+  const [regLast, setRegLast] = useState('');
+  const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [showRegPw, setShowRegPw]     = useState(false);
+  const [showRegPw, setShowRegPw] = useState(false);
 
   // OTP
-  const [otpEmail, setOtpEmail]   = useState('');
-  const [otp, setOtp]             = useState(['', '', '', '', '', '']);
-  const otpRefs                   = useRef([]);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const otpRefs = useRef([]);
 
   // Reset state on open/close
   useEffect(() => {
@@ -149,7 +149,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       {/* Backdrop - prevents closing on outside click */}
       <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" />
 
@@ -159,8 +159,13 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
         {/* Left accent strip */}
         <div className="hidden md:flex flex-col justify-between bg-primary-container p-8 w-52 shrink-0">
           <div>
-            <p className="font-display-lg text-2xl text-white tracking-tighter leading-tight">TanM</p>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-white/60 mt-1">Atelier</p>
+            <img
+              src="/logo-white.png"
+              alt="TanM"
+              className="h-16 w-auto object-contain mb-2 filter drop-shadow-sm"
+            />
+            <p className="text-sm font-bold uppercase tracking-[0.32em] text-white">tanm</p>
+            {/* <p className="text-[10px] uppercase tracking-[0.25em] text-white/60 mt-0.5">Atelier</p> */}
           </div>
           <div className="space-y-4">
             {[['workspace_premium', 'Premium Quality'], ['favorite', 'Curated for You'], ['lock', 'Secure Account']].map(([icon, text]) => (
@@ -276,7 +281,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <InputField label="First Name" value={regFirst} onChange={setRegFirst} placeholder="Julian" autoFocus />
-                <InputField label="Last Name"  value={regLast}  onChange={setRegLast}  placeholder="Royce" />
+                <InputField label="Last Name" value={regLast} onChange={setRegLast} placeholder="Royce" />
               </div>
 
               <InputField
@@ -371,7 +376,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 <button
                   type="button"
                   className="text-primary font-bold hover:opacity-70 transition-opacity"
-                  onClick={() => { setOtp(['','','','','','']); setError(''); }}
+                  onClick={() => { setOtp(['', '', '', '', '', '']); setError(''); }}
                 >
                   Resend Code
                 </button>
