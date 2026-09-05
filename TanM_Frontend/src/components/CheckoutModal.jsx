@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { addressApi, orderApi } from '../api';
+import { useToast } from '../context/ToastContext';
 
 export default function CheckoutModal({
   checkoutData,
@@ -8,6 +9,7 @@ export default function CheckoutModal({
   user,
   onOpenLogin
 }) {
+  const toast = useToast();
   const [addresses, setAddresses] = useState([]);
   const [shippingAddressId, setShippingAddressId] = useState('');
   const [billingAddressId, setBillingAddressId] = useState('');
@@ -58,7 +60,7 @@ export default function CheckoutModal({
     e.preventDefault();
     try {
       const created = await addressApi.create(newAddress);
-      alert('Address saved to your profile!');
+      toast.success('Address saved to your profile!');
       setShowAddressForm(false);
       
       const list = await addressApi.getAll();
@@ -68,18 +70,18 @@ export default function CheckoutModal({
       setShippingAddressId(newIdStr);
       setBillingAddressId(newIdStr);
     } catch (err) {
-      alert(err.message || 'Failed to create address');
+      toast.error(err.message || 'Failed to create address');
     }
   };
 
   const handlePlaceOrder = async () => {
     if (!user) {
-      alert('Please sign in or create an account to complete your order.');
+      toast.warning('Please sign in or create an account to complete your order.');
       if (onOpenLogin) onOpenLogin();
       return;
     }
     if (!shippingAddressId) {
-      alert('Please select or add a shipping address.');
+      toast.warning('Please select or add a shipping address.');
       return;
     }
     const finalBillingId = billingAddressId || shippingAddressId;
@@ -93,14 +95,14 @@ export default function CheckoutModal({
         checkoutData?.couponCode
       );
 
-      alert(`Order TNM-${order.orderNumber} created successfully! Initiating payment gateway simulation...`);
+      toast.info(`Order TNM-${order.orderNumber} created! Simulating payment gateway...`);
       
       await orderApi.pay(order.orderNumber);
       
-      alert('Payment authorization successful! Your leather goods are queued in the workshop.');
+      toast.success('Payment authorized! Your bespoke leather goods are queued in the workshop.');
       onOrderSuccess();
     } catch (err) {
-      alert(err.message || 'Failed to complete order checkout');
+      toast.error(err.message || 'Failed to complete order checkout');
     } finally {
       setPlacing(false);
     }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { productApi } from '../api';
+import { useToast } from '../context/ToastContext';
 
 // ── Static fallback data ────────────────────────────────────────
 const TESTIMONIALS = [
@@ -47,6 +48,7 @@ const fmt = (price) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price);
 
 export default function Home({ onSelectProduct, onNavigate }) {
+  const toast = useToast();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const parallaxRef = useRef(null);
@@ -352,7 +354,11 @@ export default function Home({ onSelectProduct, onNavigate }) {
           </p>
           <form
             className="flex flex-col md:flex-row gap-4"
-            onSubmit={(e) => { e.preventDefault(); alert('Thank you for subscribing!'); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              toast.success('Thank you for subscribing to The TanM Journal!');
+              e.target.reset();
+            }}
           >
             <input
               type="email"

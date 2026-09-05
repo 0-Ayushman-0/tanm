@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { authApi, orderApi } from '../api';
+import { useToast } from '../context/ToastContext';
 
 export default function UserProfile({ user, onUpdateUser }) {
+  const toast = useToast();
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
@@ -48,9 +50,9 @@ export default function UserProfile({ user, onUpdateUser }) {
     try {
       const updated = await authApi.updateProfile(profileForm);
       onUpdateUser(updated);
-      alert('Profile details updated successfully!');
+      toast.success('Profile details updated successfully!');
     } catch (err) {
-      alert(err.message || 'Failed to update profile');
+      toast.error(err.message || 'Failed to update profile');
     } finally {
       setUpdatingProfile(false);
     }
@@ -62,9 +64,9 @@ export default function UserProfile({ user, onUpdateUser }) {
     try {
       await authApi.changePassword(passForm.currentPassword, passForm.newPassword);
       setPassForm({ currentPassword: '', newPassword: '' });
-      alert('Password updated successfully!');
+      toast.success('Password updated successfully!');
     } catch (err) {
-      alert(err.message || 'Failed to change password');
+      toast.error(err.message || 'Failed to change password');
     } finally {
       setUpdatingPass(false);
     }
@@ -76,7 +78,7 @@ export default function UserProfile({ user, onUpdateUser }) {
       const details = await orderApi.getDetails(orderNumber);
       setSelectedOrderDetails(details);
     } catch (err) {
-      alert(err.message || 'Failed to fetch tracking details');
+      toast.error(err.message || 'Failed to fetch tracking details');
     } finally {
       setLoadingTimeline(false);
     }

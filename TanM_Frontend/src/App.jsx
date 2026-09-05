@@ -12,9 +12,12 @@ import WishlistDrawer from './components/WishlistDrawer';
 import ProductDetailsModal from './components/ProductDetailsModal';
 import CheckoutModal from './components/CheckoutModal';
 import { authApi, cartApi, wishlistApi } from './api';
+import { useToast } from './context/ToastContext';
 
 function App() {
+  const toast = useToast();
   const [currentTab, setCurrentTab] = useState('home');
+
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState(null);
   const [wishlist, setWishlist] = useState(null);
@@ -78,7 +81,7 @@ function App() {
     setCart(null);
     setWishlist(null);
     setCurrentTab('home');
-    alert('You have successfully signed out.');
+    toast.info('You have successfully signed out.');
   };
 
   const handleLoginSuccess = async (userData) => {
@@ -176,13 +179,17 @@ function App() {
       <ProductDetailsModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
-        onAddToCart={async (p) => {
+        onNavigate={setCurrentTab}
+        user={user}
+        onAddToCart={async (p, qty = 1) => {
           try {
-            const updated = await cartApi.addItem(p.id, 1);
+            const updated = await cartApi.addItem(p.id, qty);
             setCart(updated);
-            alert(`${p.name} added to shopping bag.`);
+            toast.success(`${p.name} ${qty > 1 ? `(${qty} items)` : ''} added to shopping bag.`);
+            return true;
           } catch (err) {
-            alert(err.message || 'Failed to add item');
+            toast.error(err.message || 'Failed to add item to bag');
+            return false;
           }
         }}
       />

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { reviewApi } from '../api';
+import { useToast } from '../context/ToastContext';
 
 export default function ProductDetailsModal({
   product,
   onClose,
   onAddToCart,
+  onNavigate,
   user
 }) {
+  const toast = useToast();
   const [reviews, setReviews] = useState([]);
   const [summary, setSummary] = useState(null);
   const [newRating, setNewRating] = useState(5);
@@ -14,9 +17,17 @@ export default function ProductDetailsModal({
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
 
+  // Add to Bag UI States
+  const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
+
   useEffect(() => {
     if (product) {
       loadReviews();
+      setQuantity(1);
+      setJustAdded(false);
+      setIsAdding(false);
     }
   }, [product]);
 
@@ -41,7 +52,7 @@ export default function ProductDetailsModal({
       await reviewApi.toggleHelpful(reviewId);
       loadReviews();
     } catch (err) {
-      alert(err.message || 'Already voted or failed to vote');
+      toast.error(err.message || 'Already voted or failed to vote');
     }
   };
 
@@ -53,12 +64,26 @@ export default function ProductDetailsModal({
       await reviewApi.add(product.id, newRating, newComment);
       setNewComment('');
       setNewRating(5);
-      alert('Review submitted successfully! It will appear once approved by moderation.');
+      toast.success('Review submitted successfully! It will appear once approved by moderation.');
       loadReviews();
     } catch (err) {
-      alert(err.message || 'Failed to submit review. You must have a verified purchase order.');
+      toast.error(err.message || 'Failed to submit review. Verified purchase required.');
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!product || product.stockQuantity <= 0 || isAdding) return;
+    setIsAdding(true);
+    try {
+      const success = await onAddToCart(product, quantity);
+      if (success !== false) {
+        setJustAdded(true);
+        setTimeout(() => setJustAdded(false), 3500);
+      }
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -75,6 +100,9 @@ export default function ProductDetailsModal({
     ? sortedImageObjects.map(img => img.imageUrl)
     : [product.mainImageUrl || 'https://via.placeholder.com/600x800'];
 
+  const isOutOfStock = !product.stockQuantity || product.stockQuantity <= 0;
+  const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex justify-center items-center p-4 overflow-y-auto">
       <div className="bg-surface w-full max-w-5xl rounded-lg shadow-2xl overflow-y-auto max-h-[95vh] border border-outline-variant/20 relative">
@@ -82,7 +110,7 @@ export default function ProductDetailsModal({
         {/* Close Button overlay */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 bg-surface/80 hover:bg-primary hover:text-surface text-on-surface p-2.5 rounded-full shadow z-50 flex items-center justify-center transition-all"
+          className="absolute top-6 right-6 bg-surface/80 hover:bg-primary hover:text-surface text-on-surface p-2.5 rounded-full shadow z-50 flex items-center justify-center transition-all cursor-pointer"
         >
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
@@ -122,15 +150,31 @@ export default function ProductDetailsModal({
             {/* Right: Info Panel (5 Columns) */}
             <div className="md:col-span-5 space-y-8 mt-12 md:mt-0 text-left">
               <div className="space-y-4">
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <span className="font-label-sm text-[10px] uppercase text-tertiary border border-outline-variant/30 px-3 py-1 font-bold">
-                    {product.stockQuantity > 0 ? 'Limited Edition' : 'Sold Out'}
+                    {isOutOfStock ? 'Sold Out' : 'Limited Edition'}
                   </span>
+                  {/* Real-time availability indicator */}
+                  {!isOutOfStock && (
+                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                      isLowStock ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isLowStock ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+                      {isLowStock ? `Only ${product.stockQuantity} Left` : 'In Stock'}
+                    </span>
+                  )}
                 </div>
                 <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface leading-none tracking-tighter font-bold">
                   {product.name}
                 </h1>
-                <p className="font-headline-md text-2xl text-primary font-bold">₹{product.price.toFixed(2)}</p>
+                <p className="font-headline-md text-2xl text-primary font-bold">
+                  ₹{(product.price * quantity).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {quantity > 1 && (
+                    <span className="text-xs font-normal text-on-surface-variant ml-2">
+                      (₹{product.price.toFixed(2)} each)
+                    </span>
+                  )}
+                </p>
               </div>
 
               <div className="space-y-6">
@@ -141,20 +185,99 @@ export default function ProductDetailsModal({
                 <ul className="space-y-3 pt-4 border-t border-outline-variant/20 text-xs">
                   <li className="flex justify-between items-center py-1">
                     <span className="font-label-sm text-on-surface-variant font-semibold">Material</span>
-                    <span className="font-body-md text-on-surface">{product.leatherType || 'Full Grain Vachetta'}</span>
+                    <span className="font-body-md text-on-surface font-medium">{product.leatherType || 'Full Grain Vachetta'}</span>
                   </li>
+                  {product.color && (
+                    <li className="flex justify-between items-center py-1">
+                      <span className="font-label-sm text-on-surface-variant font-semibold">Colorway</span>
+                      <span className="font-body-md text-on-surface font-medium">{product.color}</span>
+                    </li>
+                  )}
                 </ul>
               </div>
 
-              {/* Add to Bag action */}
-              <div className="space-y-4 pt-6">
+              {/* Add to Bag with Stepper & Rich Multi-state Feedback */}
+              <div className="space-y-3 pt-4 border-t border-outline-variant/10">
+                {!isOutOfStock && (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="font-label-sm text-xs font-bold uppercase tracking-wider text-on-surface">Quantity</span>
+                    <div className="flex items-center border border-outline-variant/40 rounded bg-surface">
+                      <button
+                        type="button"
+                        disabled={quantity <= 1 || isAdding}
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        className="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-30 cursor-pointer font-bold"
+                        aria-label="Decrease quantity"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">remove</span>
+                      </button>
+                      <span className="w-10 text-center font-bold text-xs select-none">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={quantity >= product.stockQuantity || isAdding}
+                        onClick={() => setQuantity((q) => Math.min(product.stockQuantity, q + 1))}
+                        className="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-30 cursor-pointer font-bold"
+                        aria-label="Increase quantity"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">add</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Multi-state Add to Bag Button */}
                 <button
-                  disabled={product.stockQuantity <= 0}
-                  onClick={() => onAddToCart(product)}
-                  className="w-full bg-primary text-surface py-5 px-8 font-label-sm text-xs uppercase tracking-widest hover:bg-primary-container disabled:bg-surface-dim transition-all duration-300 font-bold"
+                  type="button"
+                  disabled={isOutOfStock || isAdding}
+                  onClick={handleAddToCart}
+                  className={`w-full py-4.5 px-6 font-label-sm text-xs uppercase tracking-widest font-bold transition-all duration-300 flex items-center justify-center gap-2.5 rounded-sm shadow-md cursor-pointer select-none active:scale-[0.99]
+                    ${isOutOfStock
+                      ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed shadow-none'
+                      : justAdded
+                        ? 'bg-emerald-900 text-white shadow-lg'
+                        : isAdding
+                          ? 'bg-neutral-900 text-neutral-300 cursor-wait'
+                          : 'bg-primary text-white hover:bg-neutral-800 hover:shadow-xl'
+                    }`}
                 >
-                  {product.stockQuantity > 0 ? 'Add to Bag' : 'Out of Stock'}
+                  {isAdding ? (
+                    <>
+                      <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                      <span>Adding to Shopping Bag…</span>
+                    </>
+                  ) : justAdded ? (
+                    <>
+                      <span className="material-symbols-outlined text-[18px] text-emerald-300">check_circle</span>
+                      <span>Added to Shopping Bag ✓</span>
+                    </>
+                  ) : isOutOfStock ? (
+                    <span>Sold Out</span>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
+                      <span>Add to Bag — ₹{(product.price * quantity).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                    </>
+                  )}
                 </button>
+
+                {/* Instant Post-Add Drawer Quick Links */}
+                {justAdded && (
+                  <div className="pt-2 flex flex-col gap-2 animate-toast-slide-in">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        if (onNavigate) onNavigate('cart');
+                      }}
+                      className="w-full bg-surface-container-high border border-primary/20 hover:border-primary text-primary py-3 px-4 text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer rounded-sm hover:bg-surface-variant"
+                    >
+                      <span>View Bag &amp; Checkout</span>
+                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Specs Accordions */}

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi, productApi, orderApi, categoryApi, uploadApi } from '../api';
+import { useToast } from '../context/ToastContext';
 
 export default function AdminPortal() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, products, categories, orders, inventory, moderation, cms
   
   // Analytics State
@@ -174,16 +176,17 @@ export default function AdminPortal() {
       };
       if (editingCategory && editingCategory.id) {
         await categoryApi.update(editingCategory.id, payload);
-        alert('Category updated successfully!');
+        toast.success('Category updated successfully!');
       } else {
         await categoryApi.create(payload);
-        alert('Category created successfully!');
+        toast.success('Category created successfully!');
       }
       setEditingCategory(null);
       setCategoryFormError('');
       loadCategories();
     } catch (err) {
       setCategoryFormError(err.message || 'Failed to save category');
+      toast.error(err.message || 'Failed to save category');
     }
   };
 
@@ -191,10 +194,10 @@ export default function AdminPortal() {
     if (!window.confirm('Are you sure you want to delete this category?')) return;
     try {
       await categoryApi.remove(id);
-      alert('Category deleted successfully!');
+      toast.success('Category deleted successfully!');
       loadCategories();
     } catch (err) {
-      alert(err.message || 'Failed to delete category');
+      toast.error(err.message || 'Failed to delete category');
     }
   };
 
@@ -204,8 +207,9 @@ export default function AdminPortal() {
     try {
       const result = await uploadApi.uploadImage(file, folder);
       onSuccess(result.url);
+      toast.success('Image uploaded to Cloudinary');
     } catch (err) {
-      alert(err.message || 'Failed to upload image to Cloudinary');
+      toast.error(err.message || 'Failed to upload image to Cloudinary');
     } finally {
       setUploadingImage(false);
     }
@@ -217,8 +221,9 @@ export default function AdminPortal() {
     try {
       const results = await uploadApi.uploadImages(files, folder);
       onSuccess(results);
+      toast.success(`${results.length} images uploaded to Cloudinary`);
     } catch (err) {
-      alert(err.message || 'Failed to upload batch images to Cloudinary');
+      toast.error(err.message || 'Failed to upload batch images to Cloudinary');
     } finally {
       setUploadingImage(false);
     }
@@ -289,10 +294,10 @@ export default function AdminPortal() {
       };
       if (editingProduct && editingProduct.id) {
         await productApi.update(editingProduct.id, payload);
-        alert('Product updated successfully!');
+        toast.success('Product updated successfully!');
       } else {
         const created = await productApi.create(payload);
-        alert('Product created successfully!');
+        toast.success('Product created successfully!');
         
         // Process bulk image requests
         const bulkRequests = newProductImages.map((img, idx) => ({
@@ -315,6 +320,7 @@ export default function AdminPortal() {
       loadProducts();
     } catch (err) {
       setProductFormError(err.message || 'Failed to save product');
+      toast.error(err.message || 'Failed to save product');
     }
   };
 
@@ -322,10 +328,10 @@ export default function AdminPortal() {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     try {
       await productApi.remove(id);
-      alert('Product deleted!');
+      toast.success('Product deleted!');
       loadProducts();
     } catch (err) {
-      alert(err.message || 'Failed to delete product');
+      toast.error(err.message || 'Failed to delete product');
     }
   };
 
@@ -333,7 +339,7 @@ export default function AdminPortal() {
     if (!newProductImageUrl) return;
     try {
       await productApi.addImage(productId, newProductImageUrl, isPrimaryImage);
-      alert('Image added to product!');
+      toast.success('Image added to product!');
       setNewProductImageUrl('');
       loadProducts();
       if (editingProduct && editingProduct.id === productId) {
@@ -341,7 +347,7 @@ export default function AdminPortal() {
         setEditingProduct(updated);
       }
     } catch (err) {
-      alert(err.message || 'Failed to add image');
+      toast.error(err.message || 'Failed to add image');
     }
   };
 
@@ -349,28 +355,28 @@ export default function AdminPortal() {
     if (!window.confirm('Delete image?')) return;
     try {
       await productApi.deleteImage(productId, imageId);
-      alert('Image deleted!');
+      toast.success('Image deleted!');
       loadProducts();
       if (editingProduct && editingProduct.id === productId) {
         const updated = await productApi.getById(productId);
         setEditingProduct(updated);
       }
     } catch (err) {
-      alert(err.message || 'Failed to delete image');
+      toast.error(err.message || 'Failed to delete image');
     }
   };
 
   const handleSetPrimaryProductImage = async (productId, imageId) => {
     try {
       await productApi.setPrimaryImage(productId, imageId);
-      alert('Primary image set!');
+      toast.success('Primary image set!');
       loadProducts();
       if (editingProduct && editingProduct.id === productId) {
         const updated = await productApi.getById(productId);
         setEditingProduct(updated);
       }
     } catch (err) {
-      alert(err.message || 'Failed to set primary image');
+      toast.error(err.message || 'Failed to set primary image');
     }
   };
 
@@ -394,14 +400,14 @@ export default function AdminPortal() {
         adjType,
         adjReason || 'Manual Admin Override'
       );
-      alert('Stock successfully adjusted and audit log recorded!');
+      toast.success('Stock adjusted and audit log recorded!');
       setNewQty('');
       setAdjReason('');
       setSelectedProduct(null);
       loadProducts();
       loadAuditLogs();
     } catch (err) {
-      alert(err.message || 'Failed to adjust stock');
+      toast.error(err.message || 'Failed to adjust stock');
     } finally {
       setAdjusting(false);
     }
@@ -422,10 +428,10 @@ export default function AdminPortal() {
   const handleModerateReview = async (reviewId, status) => {
     try {
       await adminApi.updateReviewStatus(reviewId, status);
-      alert(`Review has been successfully marked as ${status}`);
+      toast.success(`Review marked as ${status}`);
       loadReviewsQueue();
     } catch (err) {
-      alert(err.message || 'Failed to update review status');
+      toast.error(err.message || 'Failed to update review status');
     }
   };
 
@@ -441,13 +447,13 @@ export default function AdminPortal() {
   const handleUpdateOrderStatus = async (orderNumber, status) => {
     try {
       const updated = await adminApi.updateOrderStatus(orderNumber, status);
-      alert(`Order status updated to ${status}`);
+      toast.success(`Order status updated to ${status}`);
       if (selectedAdminOrder && selectedAdminOrder.orderNumber === orderNumber) {
         setSelectedAdminOrder(updated);
       }
       loadOrders();
     } catch (err) {
-      alert(err.message || 'Failed to update order status');
+      toast.error(err.message || 'Failed to update order status');
     }
   };
 
@@ -483,10 +489,10 @@ export default function AdminPortal() {
         const created = await adminApi.createCmsAnnouncement(annForm);
         setAnnForm(created);
       }
-      alert('Store announcement saved successfully! Clear site cache to verify.');
+      toast.success('Store announcement saved successfully!');
       loadCmsData();
     } catch (err) {
-      alert(err.message || 'Failed to save announcement bar');
+      toast.error(err.message || 'Failed to save announcement bar');
     } finally {
       setSavingCms(false);
     }
@@ -515,7 +521,7 @@ export default function AdminPortal() {
       } else {
         await adminApi.createCmsHeroSlide(dto);
       }
-      alert('Hero slide configurations saved successfully!');
+      toast.success('Hero slide configurations saved successfully!');
       setEditingSlide(null);
       setSlideForm({
         title: '',
@@ -526,7 +532,7 @@ export default function AdminPortal() {
       });
       loadCmsData();
     } catch (err) {
-      alert(err.message || 'Failed to save slide');
+      toast.error(err.message || 'Failed to save slide');
     } finally {
       setSavingCms(false);
     }
@@ -536,10 +542,10 @@ export default function AdminPortal() {
     if (!window.confirm('Delete this hero slide?')) return;
     try {
       await adminApi.deleteCmsHeroSlide(id);
-      alert('Slide deleted successfully!');
+      toast.success('Slide deleted successfully!');
       loadCmsData();
     } catch (err) {
-      alert(err.message || 'Failed to delete slide');
+      toast.error(err.message || 'Failed to delete slide');
     }
   };
 

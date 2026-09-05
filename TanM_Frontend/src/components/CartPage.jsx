@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { cartApi, couponApi } from '../api';
+import { useToast } from '../context/ToastContext';
 
 export default function CartPage({
   cart,
@@ -7,6 +8,7 @@ export default function CartPage({
   onOpenCheckout,
   onNavigate
 }) {
+  const toast = useToast();
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
@@ -22,7 +24,7 @@ export default function CartPage({
       const updated = await cartApi.updateItem(itemId, newQty);
       onUpdateCart(updated);
     } catch (err) {
-      alert(err.message || 'Failed to update quantity');
+      toast.error(err.message || 'Failed to update quantity');
     }
   };
 
@@ -30,8 +32,9 @@ export default function CartPage({
     try {
       const updated = await cartApi.removeItem(itemId);
       onUpdateCart(updated);
+      toast.info('Item removed from shopping bag');
     } catch (err) {
-      alert(err.message || 'Failed to remove item');
+      toast.error(err.message || 'Failed to remove item');
     }
   };
 
@@ -43,9 +46,11 @@ export default function CartPage({
       const result = await couponApi.validate(couponCode, cart.subtotal);
       setAppliedCoupon(result);
       setCouponError('');
+      toast.success(`Coupon "${couponCode.toUpperCase()}" applied!`);
     } catch (err) {
       setCouponError(err.message || 'Invalid coupon code');
       setAppliedCoupon(null);
+      toast.error(err.message || 'Invalid coupon code');
     } finally {
       setValidating(false);
     }
@@ -54,6 +59,7 @@ export default function CartPage({
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
+    toast.info('Coupon removed');
   };
 
   const subtotal = cart?.subtotal ?? cart?.totalPrice ?? 0;
