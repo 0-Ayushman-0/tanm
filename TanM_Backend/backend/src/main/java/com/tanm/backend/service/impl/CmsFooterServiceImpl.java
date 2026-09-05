@@ -8,7 +8,6 @@ import com.tanm.backend.entity.CmsFooterLink;
 import com.tanm.backend.entity.CmsFooterSection;
 import com.tanm.backend.enums.CmsStatus;
 import com.tanm.backend.exception.ResourceNotFoundException;
-import com.tanm.backend.repository.CmsFooterLinkRepository;
 import com.tanm.backend.repository.CmsFooterSectionRepository;
 import com.tanm.backend.service.CmsFooterService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ import java.util.stream.Collectors;
 public class CmsFooterServiceImpl implements CmsFooterService {
 
     private final CmsFooterSectionRepository sectionRepository;
-    private final CmsFooterLinkRepository linkRepository;
 
     @Override
     @Transactional(readOnly = true)

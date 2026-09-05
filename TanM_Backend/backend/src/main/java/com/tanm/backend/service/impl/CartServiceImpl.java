@@ -12,7 +12,6 @@ import com.tanm.backend.enums.ProductStatus;
 import com.tanm.backend.exception.BadRequestException;
 import com.tanm.backend.exception.ResourceNotFoundException;
 import com.tanm.backend.mapper.CartMapper;
-import com.tanm.backend.repository.CartItemRepository;
 import com.tanm.backend.repository.CartRepository;
 import com.tanm.backend.repository.ProductRepository;
 import com.tanm.backend.service.CartService;
@@ -28,7 +27,6 @@ import java.util.List;
 public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final CartMapper cartMapper;
 

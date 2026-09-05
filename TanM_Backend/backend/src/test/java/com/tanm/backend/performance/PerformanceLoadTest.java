@@ -1,6 +1,5 @@
 package com.tanm.backend.performance;
 
-import com.tanm.backend.dto.GlobalSearchResponseDto;
 import com.tanm.backend.entity.Category;
 import com.tanm.backend.entity.Product;
 import com.tanm.backend.enums.ProductStatus;
@@ -18,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -26,7 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

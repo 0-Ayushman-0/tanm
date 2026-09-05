@@ -1,7 +1,6 @@
 package com.tanm.backend.service.impl;
 
 import com.tanm.backend.dto.OrderDto;
-import com.tanm.backend.dto.OrderItemDto;
 import com.tanm.backend.entity.EmailLog;
 import com.tanm.backend.enums.EmailTemplate;
 import com.tanm.backend.repository.EmailLogRepository;
@@ -15,7 +14,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.internet.MimeMessage;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 

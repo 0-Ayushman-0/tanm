@@ -4,8 +4,6 @@ import com.tanm.backend.dto.CollectionCreateRequest;
 import com.tanm.backend.dto.CollectionDetailDto;
 import com.tanm.backend.dto.CollectionDto;
 
-import java.util.List;
-
 public interface CollectionService {
     CollectionDto createCollection(CollectionCreateRequest request);
     CollectionDetailDto getCollectionById(Long id);

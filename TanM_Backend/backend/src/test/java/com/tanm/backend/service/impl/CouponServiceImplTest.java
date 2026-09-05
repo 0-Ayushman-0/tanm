@@ -1,7 +1,6 @@
 package com.tanm.backend.service.impl;
 
 import com.tanm.backend.dto.CouponCalculationResponse;
-import com.tanm.backend.dto.CouponDto;
 import com.tanm.backend.entity.*;
 import com.tanm.backend.enums.CartStatus;
 import com.tanm.backend.enums.CouponType;
@@ -23,8 +22,6 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
 class CouponServiceImplTest {

@@ -9,7 +9,6 @@ import com.tanm.backend.enums.ProductStatus;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;

@@ -31,14 +31,12 @@ import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
     private final OrderTimelineRepository orderTimelineRepository;
     private final CartRepository cartRepository;
     private final AddressRepository addressRepository;

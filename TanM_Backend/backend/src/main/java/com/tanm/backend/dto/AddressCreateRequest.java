@@ -2,7 +2,6 @@ package com.tanm.backend.dto;
 
 import com.tanm.backend.enums.AddressType;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;

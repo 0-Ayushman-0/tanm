@@ -4,8 +4,6 @@ import com.tanm.backend.dto.DashboardSummaryDto;
 import com.tanm.backend.dto.ProductDto;
 import com.tanm.backend.dto.TopProductDto;
 import com.tanm.backend.entity.Product;
-import com.tanm.backend.enums.FulfillmentStatus;
-import com.tanm.backend.enums.PaymentStatus;
 import com.tanm.backend.mapper.ProductMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -20,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;

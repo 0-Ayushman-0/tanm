@@ -3,8 +3,6 @@ package com.tanm.backend.service;
 import com.tanm.backend.dto.ProductCreateRequest;
 import com.tanm.backend.dto.ProductDto;
 
-import java.util.List;
-
 public interface ProductService {
     ProductDto createProduct(ProductCreateRequest request);
     ProductDto getProductById(Long id);

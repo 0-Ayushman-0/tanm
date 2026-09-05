@@ -3,8 +3,6 @@ package com.tanm.backend.service;
 import com.tanm.backend.dto.CategoryCreateRequest;
 import com.tanm.backend.dto.CategoryDto;
 
-import java.util.List;
-
 public interface CategoryService {
     CategoryDto createCategory(CategoryCreateRequest request);
     CategoryDto getCategoryById(Long id);

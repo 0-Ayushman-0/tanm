@@ -35,7 +35,7 @@ public class CloudinaryService {
                     "resource_type", "auto"
             );
 
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), params);
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), params);
             return Map.of(
                     "url", String.valueOf(uploadResult.get("secure_url")),
                     "publicId", String.valueOf(uploadResult.get("public_id")),

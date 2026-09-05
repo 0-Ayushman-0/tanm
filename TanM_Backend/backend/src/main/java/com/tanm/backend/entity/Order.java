@@ -7,7 +7,6 @@ import com.tanm.backend.enums.PaymentStatus;
 import com.tanm.backend.enums.CouponType;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
