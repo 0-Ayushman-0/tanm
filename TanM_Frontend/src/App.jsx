@@ -111,6 +111,58 @@ function App() {
     loadCart();
   };
 
+  // Route parsing from URL hash
+  const parseRouteFromLocation = () => {
+    const rawHash = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    if (!rawHash || rawHash === 'home') {
+      return { tab: 'home', params: {}, slug: 'shipping-returns' };
+    }
+    if (rawHash === 'admin' || rawHash.startsWith('admin/')) {
+      const sub = rawHash.startsWith('admin/') ? rawHash.replace('admin/', '') : 'dashboard';
+      return { tab: 'admin', params: { sub }, slug: 'shipping-returns' };
+    }
+    if (rawHash === 'shop') {
+      return { tab: 'shop', params: {}, slug: 'shipping-returns' };
+    }
+    if (rawHash.startsWith('shop/category/')) {
+      const catId = rawHash.replace('shop/category/', '');
+      return { tab: 'shop', params: { categoryId: catId }, slug: 'shipping-returns' };
+    }
+    if (rawHash === 'cart') {
+      return { tab: 'cart', params: {}, slug: 'shipping-returns' };
+    }
+    if (rawHash === 'profile') {
+      return { tab: 'profile', params: {}, slug: 'shipping-returns' };
+    }
+    if (rawHash === 'shipping-returns' || rawHash === 'about' || rawHash === 'privacy-policy') {
+      return { tab: 'policy', params: { slug: rawHash }, slug: rawHash };
+    }
+    if (rawHash.startsWith('policy/')) {
+      const slug = rawHash.replace('policy/', '');
+      return { tab: 'policy', params: { slug }, slug };
+    }
+    return { tab: 'home', params: {}, slug: 'shipping-returns' };
+  };
+
+  const getHashForTab = (tab, params = {}) => {
+    if (tab === 'home') return '#home';
+    if (tab === 'shop') {
+      return params?.categoryId ? `#shop/category/${params.categoryId}` : '#shop';
+    }
+    if (tab === 'cart') return '#cart';
+    if (tab === 'profile') return '#profile';
+    if (tab === 'admin') {
+      return params?.sub ? `#admin/${params.sub}` : '#admin';
+    }
+    if (tab === 'shipping-returns' || tab === 'about' || tab === 'privacy-policy') {
+      return `#${tab}`;
+    }
+    if (tab === 'policy') {
+      return params?.slug ? `#${params.slug}` : '#policy';
+    }
+    return `#${tab}`;
+  };
+
   // Disable automatic browser scroll restoration so SPA view switches always start at (0, 0)
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
@@ -118,19 +170,72 @@ function App() {
     }
   }, []);
 
-  const handleNavigate = (tab, params = {}) => {
+  // Handle browser back / forward navigation seamlessly
+  useEffect(() => {
+    // If user opened directly with a non-home hash (e.g. #admin), ensure #home is beneath it
+    // so pressing browser Back stays within the site
+    const init = parseRouteFromLocation();
+    if (init.tab !== 'home') {
+      window.history.replaceState({ tab: 'home', params: {} }, '', '#home');
+      window.history.pushState(
+        { tab: init.tab, params: init.params },
+        '',
+        getHashForTab(init.tab, { ...init.params, slug: init.slug })
+      );
+    } else {
+      window.history.replaceState({ tab: 'home', params: {} }, '', '#home');
+    }
+
+    const handlePopState = () => {
+      const route = parseRouteFromLocation();
+      setCurrentTab(route.tab);
+      if (route.tab === 'shop') {
+        setShopCategoryFilter(route.params?.categoryId || '');
+      }
+      if (route.tab === 'policy') {
+        setPolicySlug(route.slug || 'shipping-returns');
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleNavigate = (tab, params = {}, replace = false) => {
+    let resolvedTab = tab;
+    let resolvedSlug = policySlug;
+    let resolvedCat = shopCategoryFilter;
+
     if (tab === 'shop') {
-      setShopCategoryFilter(params?.categoryId !== undefined ? String(params.categoryId) : '');
+      resolvedCat = params?.categoryId !== undefined ? String(params.categoryId) : '';
+      setShopCategoryFilter(resolvedCat);
     }
     if (tab === 'shipping-returns' || tab === 'about' || tab === 'privacy-policy') {
+      resolvedSlug = tab;
+      resolvedTab = 'policy';
       setPolicySlug(tab);
-      setCurrentTab('policy');
     } else if (tab === 'policy') {
-      if (params?.slug) setPolicySlug(params.slug);
-      setCurrentTab('policy');
+      if (params?.slug) {
+        resolvedSlug = params.slug;
+        setPolicySlug(params.slug);
+      }
+      resolvedTab = 'policy';
     } else {
-      setCurrentTab(tab);
+      resolvedTab = tab;
     }
+
+    setCurrentTab(resolvedTab);
+
+    const targetHash = getHashForTab(resolvedTab, { ...params, slug: resolvedSlug, categoryId: resolvedCat });
+    if (window.location.hash !== targetHash) {
+      if (replace) {
+        window.history.replaceState({ tab: resolvedTab, params }, '', targetHash);
+      } else {
+        window.history.pushState({ tab: resolvedTab, params }, '', targetHash);
+      }
+    }
+
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
@@ -197,7 +302,10 @@ function App() {
           />
         )}
         {currentTab === 'admin' && (
-          <AdminPortal />
+          <AdminPortal
+            onExit={() => handleNavigate('home')}
+            onNavigate={handleNavigate}
+          />
         )}
         {currentTab === 'policy' && (
           <StaticPage

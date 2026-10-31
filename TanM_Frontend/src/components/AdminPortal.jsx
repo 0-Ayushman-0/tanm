@@ -2,9 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { adminApi, productApi, orderApi, categoryApi, uploadApi } from '../api';
 import { useToast } from '../context/ToastContext';
 
-export default function AdminPortal() {
+export default function AdminPortal({ onExit, onNavigate }) {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, products, categories, orders, inventory, moderation, cms
+
+  const getInitialTab = () => {
+    const raw = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    if (raw.startsWith('admin/')) {
+      const sub = raw.replace('admin/', '');
+      if (['dashboard', 'products', 'categories', 'orders', 'inventory', 'moderation', 'cms', 'pages'].includes(sub)) {
+        return sub;
+      }
+    }
+    return 'dashboard';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // Screen restriction: Only open on PC/Laptop (>= 1024px)
+  const [isDesktopScreen, setIsDesktopScreen] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktopScreen(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Analytics State
   const [summary, setSummary] = useState(null);
@@ -761,6 +786,51 @@ export default function AdminPortal() {
     }
   };
 
+  if (!isDesktopScreen) {
+    return (
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 text-center text-on-surface">
+        <div className="max-w-md w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-8 shadow-2xl space-y-6">
+          <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-inner">
+            <span className="material-symbols-outlined text-[32px]">desktop_windows</span>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-secondary">
+              Atelier Security & Display Policy
+            </span>
+            <h2 className="font-display-lg text-2xl text-primary font-bold tracking-tight">
+              Desktop Experience Required
+            </h2>
+            <p className="text-on-surface-variant text-xs leading-relaxed">
+              The TanM Atelier & Back-Office Suite is designed exclusively for laptop and PC displays (minimum 1024px width) to guarantee precision order auditing, inventory tracking, and high-resolution CMS craftsmanship.
+            </p>
+          </div>
+
+          <div className="bg-surface p-3.5 rounded-lg border border-outline-variant/20 flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
+            <span>Device Viewport:</span>
+            <span className="font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">
+              {typeof window !== 'undefined' ? `${window.innerWidth}px` : 'Mobile'} (Restricted)
+            </span>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (onExit) onExit();
+                else if (onNavigate) onNavigate('home');
+                else window.location.hash = '#home';
+              }}
+              className="w-full bg-primary text-surface py-3.5 px-6 rounded font-bold text-xs uppercase tracking-[0.2em] hover:bg-primary-container transition-all cursor-pointer shadow"
+            >
+              Return to Storefront
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex bg-background text-on-surface min-h-screen">
 
@@ -814,11 +884,20 @@ export default function AdminPortal() {
                       setActiveTab('cms');
                       setCmsSubTab('pages');
                       setEditingCmsPage(null);
+                      if (window.location.hash !== '#admin/pages') {
+                        window.history.pushState(null, '', '#admin/pages');
+                      }
                     } else if (tab.id === 'cms') {
                       setActiveTab('cms');
                       setCmsSubTab('homepage');
+                      if (window.location.hash !== '#admin/cms') {
+                        window.history.pushState(null, '', '#admin/cms');
+                      }
                     } else {
                       setActiveTab(tab.id);
+                      if (window.location.hash !== `#admin/${tab.id}`) {
+                        window.history.pushState(null, '', `#admin/${tab.id}`);
+                      }
                     }
                     setEditingSlide(null);
                   }}
@@ -845,8 +924,13 @@ export default function AdminPortal() {
             <span className="font-label-sm uppercase tracking-wider font-bold">Support</span>
           </a>
           <button
-            onClick={() => window.location.reload()}
-            className="w-full flex items-center gap-4 py-3 px-4 text-on-surface-variant hover:text-primary transition-colors text-left"
+            type="button"
+            onClick={() => {
+              if (onExit) onExit();
+              else if (onNavigate) onNavigate('home');
+              else window.location.hash = '#home';
+            }}
+            className="w-full flex items-center gap-4 py-3 px-4 text-on-surface-variant hover:text-primary transition-colors text-left cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">logout</span>
             <span className="font-label-sm uppercase tracking-wider font-bold">Exit Suite</span>
@@ -864,7 +948,20 @@ export default function AdminPortal() {
             type="text"
           />
         </div>
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => {
+              if (onExit) onExit();
+              else if (onNavigate) onNavigate('home');
+              else window.location.hash = '#home';
+            }}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded border border-outline-variant/30 hover:border-primary text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:text-primary transition-all cursor-pointer bg-surface/50 hover:bg-surface"
+          >
+            <span className="material-symbols-outlined text-[18px]">storefront</span>
+            Back to Store
+          </button>
+          <div className="h-6 w-[1px] bg-outline-variant/30"></div>
           <span className="font-display-lg text-xl text-primary tracking-tight font-bold">Back-Office</span>
           <div className="h-8 w-[1px] bg-outline-variant/30"></div>
           <div className="flex items-center gap-3">

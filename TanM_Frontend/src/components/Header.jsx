@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cmsApi } from '../api';
+import { useToast } from '../context/ToastContext';
 
 export default function Header({
   cartCount,
@@ -12,6 +13,7 @@ export default function Header({
   onLogout,
   onOpenLogin,
 }) {
+  const toast = useToast();
   const [scrolled, setScrolled] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -286,10 +288,21 @@ export default function Header({
           </button>
           {user?.role === 'ADMIN' && (
             <button
-              onClick={() => { onNavigate('admin'); setMobileMenuOpen(false); }}
-              className="text-left text-xs font-bold uppercase tracking-widest text-black hover:text-secondary py-2 border-b border-black/5 cursor-pointer transition-colors"
+              onClick={() => {
+                if (window.innerWidth < 1024) {
+                  toast.info('Admin Suite is restricted to laptop and PC displays (min 1024px).');
+                  setMobileMenuOpen(false);
+                  return;
+                }
+                onNavigate('admin');
+                setMobileMenuOpen(false);
+              }}
+              className="text-left text-xs font-bold uppercase tracking-widest text-black hover:text-secondary py-2 border-b border-black/5 cursor-pointer transition-colors flex items-center justify-between"
             >
-              Admin Suite
+              <span>Admin Suite</span>
+              <span className="text-[9px] uppercase tracking-wider text-outline px-1.5 py-0.5 rounded bg-surface-container font-mono">
+                Desktop Only
+              </span>
             </button>
           )}
           {user ? (
