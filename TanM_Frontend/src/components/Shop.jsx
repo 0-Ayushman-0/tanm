@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { productApi } from '../api';
 
-export default function Shop({ onSelectProduct }) {
+export default function Shop({ onSelectProduct, initialCategory = '' }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters State
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory ? String(initialCategory) : '');
+
+  useEffect(() => {
+    if (initialCategory !== undefined) {
+      setSelectedCategory(initialCategory ? String(initialCategory) : '');
+    }
+  }, [initialCategory]);
   const [selectedLeather, setSelectedLeather] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
@@ -19,6 +25,23 @@ export default function Shop({ onSelectProduct }) {
   // Pagination State
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+
+  // Ensure catalog view always begins from top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
+
+  // When filters or pagination change while user is scrolled, return smoothly to top of catalog
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (window.scrollY > 80) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
+  }, [selectedCategory, selectedLeather, selectedColor, priceRange.min, priceRange.max, inStockOnly, sortOption, page]);
 
   useEffect(() => {
     loadFilterMetadata();
@@ -441,7 +464,7 @@ export default function Shop({ onSelectProduct }) {
                 >
                   <div className="aspect-[4/5] overflow-hidden bg-surface-container rounded shadow">
                     <img
-                      src={p.mainImageUrl || 'https://via.placeholder.com/300x400'}
+                      src={p.mainImageUrl || 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&q=80&w=600'}
                       alt={p.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />

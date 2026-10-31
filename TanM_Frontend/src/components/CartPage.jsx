@@ -108,7 +108,7 @@ export default function CartPage({
                 <article key={item.id} className="flex py-10 border-b border-outline-variant/30 group">
                   <div className="w-32 h-40 md:w-48 md:h-64 flex-shrink-0 bg-surface-container overflow-hidden rounded shadow">
                     <img
-                      src={item.primaryImageUrl || item.productImageUrl || 'https://via.placeholder.com/300x400'}
+                      src={item.primaryImageUrl || item.productImageUrl || 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&q=80&w=400'}
                       alt={item.productName}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />

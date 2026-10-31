@@ -22,6 +22,11 @@ public class CategoryController {
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
+    @GetMapping("/signature")
+    public ResponseEntity<java.util.List<CategoryDto>> getSignatureCategories() {
+        return ResponseEntity.ok(categoryService.getSignatureCategories());
+    }
+
     @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<CategoryDto> getCategoryById(@PathVariable Long id) {
         CategoryDto category = categoryService.getCategoryById(id);

@@ -19,6 +19,7 @@ public class CategoryMapper {
                 .slug(category.getSlug())
                 .imageUrl(category.getImageUrl())
                 .displayOrder(category.getDisplayOrder())
+                .isSignatureCollection(category.isSignatureCollection())
                 .isActive(category.isActive())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
@@ -34,6 +35,7 @@ public class CategoryMapper {
                 .description(request.getDescription())
                 .imageUrl(request.getImageUrl())
                 .displayOrder(request.getDisplayOrder())
+                .isSignatureCollection(Boolean.TRUE.equals(request.getIsSignatureCollection()))
                 .build();
     }
 
@@ -45,5 +47,8 @@ public class CategoryMapper {
         category.setDescription(request.getDescription());
         category.setImageUrl(request.getImageUrl());
         category.setDisplayOrder(request.getDisplayOrder());
+        if (request.getIsSignatureCollection() != null) {
+            category.setSignatureCollection(request.getIsSignatureCollection());
+        }
     }
 }

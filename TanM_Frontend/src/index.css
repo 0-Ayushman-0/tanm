@@ -80,6 +80,43 @@ body {
   font-family: "Inter", sans-serif;
 }
 
+/* ── Global Text Selection ────────────────────────────────────── */
+::selection {
+  background-color: #805533;
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: #805533;
+  color: #ffffff;
+}
+
+/* Ensure selected text on black or dark backgrounds has high contrast and never vanishes */
+.text-white,
+.text-white *,
+.bg-black,
+.bg-black *,
+.bg-primary,
+.bg-primary *,
+[class*="text-white"],
+[class*="text-white"] *,
+[class*="bg-black"],
+[class*="bg-black"] *,
+[style*="#000000"],
+[style*="#000000"] *,
+[style*="rgb(0, 0, 0)"],
+[style*="rgb(0, 0, 0)"] * {
+  &::selection {
+    background-color: #e6b980 !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+  }
+  &::-moz-selection {
+    background-color: #e6b980 !important;
+    color: #000000 !important;
+  }
+}
+
 /* ── Material Icons ───────────────────────────────────────────── */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
@@ -119,6 +156,14 @@ body {
 .custom-scrollbar::-webkit-scrollbar       { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #827472; border-radius: 10px; }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* ── Misc Utilities ───────────────────────────────────────────── */
 .luxury-blur    { backdrop-filter: blur(30px); }
 .parallax-bg    { background-attachment: fixed; background-position: center; background-repeat: no-repeat; background-size: cover; will-change: transform; }
@@ -151,4 +196,26 @@ body {
 .animate-toast-slide-in {
   animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ── Announcement Bar Mobile Marquee ──────────────────────────── */
+@keyframes marqueeMobile {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-mobile {
+  display: flex;
+  width: max-content;
+  animation: marqueeMobile 16s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-mobile:hover {
+  animation-play-state: paused;
+}
+
 

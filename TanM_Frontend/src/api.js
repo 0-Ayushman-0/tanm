@@ -131,6 +131,7 @@ export const productApi = {
 
 export const categoryApi = {
   getAll: (page = 0, size = 100) => apiCall(`/categories?page=${page}&size=${size}`),
+  getSignature: () => apiCall('/categories/signature'),
   create: (data) => apiCall('/categories', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => apiCall(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => apiCall(`/categories/${id}`, { method: 'DELETE' }),
@@ -251,6 +252,7 @@ export const addressApi = {
 
 export const cmsApi = {
   getHydration: () => apiCall('/cms/hydration'),
+  getPage: (slug) => apiCall(`/cms/pages/${encodeURIComponent(slug)}`),
 };
 
 export const adminApi = {
@@ -309,6 +311,23 @@ export const adminApi = {
     apiCall(`/admin/cms/announcements/${id}`, {
       method: 'DELETE',
     }),
+  getCmsSettings: () => apiCall('/admin/cms/settings'),
+  updateCmsSetting: (key, dto) =>
+    apiCall(`/admin/cms/settings/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      body: JSON.stringify(dto),
+    }),
+  updateBulkCmsSettings: (settings) =>
+    apiCall('/admin/cms/settings/bulk', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+  getCmsPages: (page = 0, size = 20) => apiCall(`/admin/cms/pages?page=${page}&size=${size}`),
+  getCmsPageById: (id) => apiCall(`/admin/cms/pages/${id}`),
+  createCmsPage: (dto) => apiCall('/admin/cms/pages', { method: 'POST', body: JSON.stringify(dto) }),
+  updateCmsPage: (id, dto) => apiCall(`/admin/cms/pages/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
+  publishCmsPage: (id) => apiCall(`/admin/cms/pages/${id}/publish`, { method: 'POST' }),
+  deleteCmsPage: (id) => apiCall(`/admin/cms/pages/${id}`, { method: 'DELETE' }),
 };
 
 export const uploadApi = {

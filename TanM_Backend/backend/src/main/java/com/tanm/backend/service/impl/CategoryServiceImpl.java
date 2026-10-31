@@ -67,6 +67,15 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public java.util.List<CategoryDto> getSignatureCategories() {
+        return categoryRepository.findAllByIsDeletedFalseAndIsActiveTrueAndIsSignatureCollectionTrueOrderByDisplayOrderAscIdAsc()
+                .stream()
+                .map(categoryMapper::toDto)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public CategoryDto updateCategory(Long id, CategoryCreateRequest request) {
         Category category = categoryRepository.findByIdAndIsDeletedFalse(id)

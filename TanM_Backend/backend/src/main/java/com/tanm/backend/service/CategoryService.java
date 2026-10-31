@@ -8,6 +8,7 @@ public interface CategoryService {
     CategoryDto getCategoryById(Long id);
     CategoryDto getCategoryBySlug(String slug);
     org.springframework.data.domain.Page<CategoryDto> getAllCategories(org.springframework.data.domain.Pageable pageable);
+    java.util.List<CategoryDto> getSignatureCategories();
     CategoryDto updateCategory(Long id, CategoryCreateRequest request);
     void deleteCategory(Long id);
 }

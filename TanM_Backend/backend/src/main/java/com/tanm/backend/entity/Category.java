@@ -22,12 +22,16 @@ public class Category extends BaseEntity {
     @Column(name = "slug", nullable = false, unique = true)
     private String slug;
 
-    @Column(name = "image_url")
+    @Column(name = "image_url", length = 2048)
     private String imageUrl;
 
     @Column(name = "display_order", nullable = false)
     @Builder.Default
     private Integer displayOrder = 0;
+
+    @Column(name = "is_signature_collection", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean isSignatureCollection = false;
 
     @PrePersist
     @PreUpdate

@@ -18,6 +18,7 @@ public class CategoryDto {
     private String slug;
     private String imageUrl;
     private Integer displayOrder;
+    private boolean isSignatureCollection;
     private boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

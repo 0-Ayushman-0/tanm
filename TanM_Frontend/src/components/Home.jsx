@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { productApi } from '../api';
+import { productApi, categoryApi, cmsApi } from '../api';
 import { useToast } from '../context/ToastContext';
 
 // ── Static fallback data ────────────────────────────────────────
 const TESTIMONIALS = [
   {
     text: '"The patina on my TanM briefcase after two years of daily use is simply magnificent. It\'s truly a piece that ages with grace."',
-    author: '— James R., Architect',
+    author: '— Kabir Mehta, Architect',
   },
   {
     text: '"A level of detail you rarely see today. Every stitch is a testament to the artisan\'s dedication. My favourite travel companion."',
-    author: '— Elena M., Creative Director',
+    author: '— Ananya Sen, Creative Director',
   },
   {
     text: '"The craftsmanship is extraordinary. I received it as a gift and it has become the most-complimented item I own."',
-    author: '— Robert K., Collector',
+    author: '— Rohan Kapoor, Design Collector',
   },
 ];
 
@@ -28,19 +28,19 @@ const LIFESTYLE_IMAGES = [
 const COLLECTION_CARDS = [
   {
     label: 'Wallets',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAooTW8YSmpGE5Jx6pEk_5oLy4PRleEm4CeUs_vnoXNoVMrqPlhhfs_VCUZn06XwCNXIC4Mt-RSgMyCZtJqezF9tNTFu0tdaklu3zwa94aoNS2a6CnzB0oEakboeUW_lqoI8XC0rVjx2i0JF7-21OJ-ClDxph5hpyR3p-yjH7X18LqwBVgjvWfWtG6szOn2EyMQfclmjXk0LRCMt9R1HUl02Q0xoQ2amzeGOd6eHUUSxiM1QUi-S-Uie1IgdhylkjS-mBtCuJJQ',
+    image: 'https://res.cloudinary.com/tanm/image/upload/v1793429692/tanm/categories/xo4l3q5jt1fq91jvcedk.jpg',
   },
   {
     label: 'Bags',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBa6I-_P44uIaoDvj88lbw5XlLNrZGT0p2o2mkNN4AVEQSqtyiy4IEc16QdGLHcCKBKAcG94UI10YLSe8CSsdbqvc0FoR9hTOaRs69Afgj7ObBjObaKbTR9bvXYfrUj65rTWoF-aFrxZx6epmcOV34dL3x4DQkCA6jKViqC-B_9Hdb2SNcc4-2hQRAza6WIKreTdV7fXUZsS8L8TLy0NjH6g5S5RUbMcbfg-7iTxI_0wWOtkaZ6tFSmaWzeJtiwALzKf6tVG4whYjQ',
+    image: 'https://res.cloudinary.com/tanm/image/upload/v1793429837/tanm/categories/vx898dnbizmj9eu2flbc.jpg',
   },
   {
     label: 'Belts',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDZ1IZAEqyb2U2-81N2C0r-rThcX30f40oU9wNiJqYmSO3OCXQ8-f18a_MV7D4gmAvU6tXD_gK0qfMaslva4QLFYMFEmIu3B1iPp-LumzAR67_uMQNNBYoz0ivqApdGClUJd74cQJ-733AzcQidPIwkhzvIuXorMWZMLQgBLnqCiX0_7mRpeS4DyRcgcO8xjqkw1wR_tAEwwFzeqgTORf7X-oR13cz6l02pBO5TYba0bHO60xd6UwHzPONpQ3BVkt44y4XwMdk5KJc',
+    image: 'https://res.cloudinary.com/tanm/image/upload/v1793429840/tanm/categories/cuwpcffbfvm0o08wcaqu.jpg',
   },
   {
     label: 'Accessories',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAyJJTk_WuZ5lkQH9AF9apq7nIVLkloWnjE4WFfAB5YrMrDif7M0UOXcmdbyMnNCLdStCcNabSyUbsjroYmjdfbcK4YTCRoMLe6OZFc-tjJ3R8MRHtDCBRoKfY73i1_jZeZXRJj2fMdcp1E5b9CW-aKIg5CYo04mty2q6UDf-s87X5pSR_sHHo-w7YN54TV8eUeNF343w0e4LnUNLoF-6Nu7sbWZiPeQxkk1YPerueswOUT_PMGHRB7GbEMMPFIkAs3fkXjHREfjfY',
+    image: 'https://res.cloudinary.com/tanm/image/upload/v1793429843/tanm/categories/kgswsd4fa1ezzasxpzhb.jpg',
   },
 ];
 
@@ -50,8 +50,32 @@ const fmt = (price) =>
 export default function Home({ onSelectProduct, onNavigate }) {
   const toast = useToast();
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [signatureCategories, setSignatureCategories] = useState([]);
+  const [siteSettings, setSiteSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const parallaxRef = useRef(null);
+
+  const collectionScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScrollBounds = () => {
+    if (collectionScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = collectionScrollRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  const scrollCollections = (direction) => {
+    if (collectionScrollRef.current) {
+      const scrollAmount = collectionScrollRef.current.clientWidth * 0.75;
+      collectionScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -64,6 +88,27 @@ export default function Home({ onSelectProduct, onNavigate }) {
         setLoading(false);
       }
     })();
+
+    (async () => {
+      try {
+        const cats = await categoryApi.getSignature();
+        const data = Array.isArray(cats) ? cats : (cats?.content || []);
+        setSignatureCategories(data);
+      } catch (e) {
+        console.error('Failed to load signature categories', e);
+      }
+    })();
+
+    (async () => {
+      try {
+        const hyd = await cmsApi.getHydration();
+        if (hyd?.siteSettings) {
+          setSiteSettings(hyd.siteSettings);
+        }
+      } catch (e) {
+        console.error('Failed to load CMS hydration', e);
+      }
+    })();
   }, []);
 
   // Scroll-reveal observer
@@ -74,7 +119,27 @@ export default function Home({ onSelectProduct, onNavigate }) {
     );
     document.querySelectorAll('.reveal-item').forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [loading]);
+  }, [loading, signatureCategories]);
+
+  useEffect(() => {
+    checkScrollBounds();
+    const handleResize = () => checkScrollBounds();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [signatureCategories]);
+
+  // Dynamic signature collections list with graceful fallback to curated items
+  const displayCollections = signatureCategories.length > 0
+    ? signatureCategories.map((c) => ({
+        id: c.id,
+        label: c.name,
+        image: c.imageUrl || 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&q=80',
+      }))
+    : COLLECTION_CARDS.map((c) => ({
+        id: null,
+        label: c.label,
+        image: c.image,
+      }));
 
   // Bento: first product is large (col-span-8), rest are small
   const bentoLarge = featuredProducts[0] || null;
@@ -129,21 +194,25 @@ export default function Home({ onSelectProduct, onNavigate }) {
           {/* Stacked image pair */}
           <div className="relative h-[560px] reveal-item">
             <div
-              className="absolute top-0 left-0 w-3/4 h-[420px] shadow-2xl z-10 bg-cover bg-center"
-              style={{ backgroundImage: `url("https://lh3.googleusercontent.com/aida-public/AB6AXuBelvgn8qTBy4lpUFXuIWutPmodL_1Xm0aB05hzSIMcUygl_gB8x7bZA7S-R7c8TUjFn5voHFdJcuFNJAqYtInIM4CLfF8C93fnmmEyzyeFxk3lsCAUjeP5DdF_rLeypZ5QbZPohi9KTnGURUKNGXGtHbNfhZgXhDA2kEbLCH64quTpFKxHoSQ1ZRPDoP7BowYGayeInaEJa55X-B3K2PL9nyxCy0Bt9t011eWqMiUbvtMwjws0p8vHkSUT6V7y0obp2n5FIqfXP5w")` }}
+              className="absolute top-0 left-0 w-3/4 h-[420px] shadow-2xl z-10 bg-cover bg-center rounded"
+              style={{ backgroundImage: `url("${siteSettings['craft_image_1'] || 'https://res.cloudinary.com/tanm/image/upload/v1793431372/tanm/cms/ryqx17zfukzuzkqbjtzw.jpg'}")` }}
             />
             <div
-              className="absolute bottom-0 right-0 w-2/3 h-[360px] shadow-2xl z-20 bg-cover bg-center"
-              style={{ backgroundImage: `url("https://lh3.googleusercontent.com/aida-public/AB6AXuAgLe3hlE9tuaGo_ket1ujAXOkW1bZeM3OH5kjSrN7XZlAoqTzFns-gFoPJkmEXTZXHB86DuULmQpaqIprTrGPwBYce6wXaaD1vsbgBqeHYP0d02OWYi3C1P4deB81mh6fUKuLmuPTu1jqCom1cEQRRGITIyZTiLEkFgzmUMNizWapna1hnZPjAuqE48nFa_FUV_oPifPofKYTng2r6eJTn0Uf1pLALGqnycOjhIsdA_JIhDxPiC1n82fTkyrc8NW_LH_kmSDtwu3s")` }}
+              className="absolute bottom-0 right-0 w-2/3 h-[360px] shadow-2xl z-20 bg-cover bg-center rounded border-4 border-surface"
+              style={{ backgroundImage: `url("${siteSettings['craft_image_2'] || 'https://res.cloudinary.com/tanm/image/upload/v1793431375/tanm/cms/t0gxzpcotyhlvzbkdfzm.jpg'}")` }}
             />
           </div>
 
           {/* Copy */}
           <div className="space-y-6 reveal-item">
-            <span className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Our Philosophy</span>
-            <h2 className="font-display-lg text-4xl md:text-5xl leading-tight text-primary">The Craft of Patience</h2>
+            <span className="text-xs font-bold uppercase tracking-[0.3em] text-primary">
+              {siteSettings['craft_subtitle'] || 'Our Philosophy'}
+            </span>
+            <h2 className="font-display-lg text-4xl md:text-5xl leading-tight text-primary">
+              {siteSettings['craft_title'] || 'The Craft of Patience'}
+            </h2>
             <p className="text-base text-on-surface-variant leading-relaxed max-w-lg">
-              In an era of fleeting trends, TanM stands for the permanent. Each piece is born from a dialogue between artisan and material — a process that cannot be rushed, only perfected through decades of heritage techniques and singular focus.
+              {siteSettings['craft_description'] || 'In an era of fleeting trends, TanM stands for the permanent. Each piece is born from a dialogue between artisan and material — a process that cannot be rushed, only perfected through decades of heritage techniques and singular focus.'}
             </p>
             <div className="flex gap-8 pt-4">
               {[['10+', 'Master Artisans'], ['3', 'Leather Grades'], ['100%', 'Hand-Stitched']].map(([val, label]) => (
@@ -164,31 +233,75 @@ export default function Home({ onSelectProduct, onNavigate }) {
       </section>
 
       {/* ── 3. SIGNATURE COLLECTIONS ────────────────────────────── */}
-      <section className="bg-surface-container-low py-section-gap">
+      <section className="bg-surface-container-low py-section-gap overflow-hidden">
         <div className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
-          <div className="mb-12 flex justify-between items-end reveal-item">
-            <h2 className="font-display-lg text-3xl text-primary">Signature Collections</h2>
-            <button
-              onClick={() => onNavigate('shop')}
-              className="text-xs font-bold uppercase tracking-widest text-primary hover:text-secondary transition-colors cursor-pointer"
-            >
-              View All →
-            </button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-gutter">
-            {COLLECTION_CARDS.map((col) => (
-              <div
-                key={col.label}
+          <div className="mb-10 flex flex-wrap justify-between items-end gap-4 reveal-item">
+            <div>
+              <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-secondary">
+                Curated Categories
+              </span>
+              <h2 className="font-display-lg text-3xl text-primary mt-1">Signature Collections</h2>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button
                 onClick={() => onNavigate('shop')}
-                className="group cursor-pointer overflow-hidden relative aspect-[3/4] bg-white shadow-sm reveal-item"
+                className="text-xs font-bold uppercase tracking-widest text-primary hover:text-secondary transition-colors cursor-pointer mr-2"
+              >
+                View All →
+              </button>
+
+              {/* Navigation Arrow Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Previous collections"
+                  onClick={() => scrollCollections('left')}
+                  disabled={!canScrollLeft}
+                  className={`w-10 h-10 rounded-full border border-outline-variant/40 flex items-center justify-center transition-all ${
+                    canScrollLeft
+                      ? 'text-primary hover:bg-primary hover:text-surface hover:border-primary cursor-pointer shadow-sm'
+                      : 'text-outline-variant opacity-40 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xl">chevron_left</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next collections"
+                  onClick={() => scrollCollections('right')}
+                  disabled={!canScrollRight}
+                  className={`w-10 h-10 rounded-full border border-outline-variant/40 flex items-center justify-center transition-all ${
+                    canScrollRight
+                      ? 'text-primary hover:bg-primary hover:text-surface hover:border-primary cursor-pointer shadow-sm'
+                      : 'text-outline-variant opacity-40 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xl">chevron_right</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Horizontal Scroll Track (without scrollbar) */}
+          <div
+            ref={collectionScrollRef}
+            onScroll={checkScrollBounds}
+            className="flex gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-4 pt-1"
+          >
+            {displayCollections.map((col) => (
+              <div
+                key={col.id ? `cat-${col.id}` : col.label}
+                onClick={() => onNavigate('shop', col.id ? { categoryId: col.id } : {})}
+                className="flex-none snap-start w-[260px] sm:w-[280px] md:w-[300px] lg:w-[calc(25%-18px)] aspect-[3/4] group cursor-pointer overflow-hidden relative bg-white shadow-sm hover:shadow-md transition-all duration-500 reveal-item"
               >
                 <div
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-110"
                   style={{ backgroundImage: `url("${col.image}")` }}
                 />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/35 transition-colors duration-500" />
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-white w-full">
-                  <h3 className="font-display-lg text-xl mb-2">{col.label}</h3>
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-white w-full px-4">
+                  <h3 className="font-display-lg text-xl mb-2 drop-shadow-sm">{col.label}</h3>
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] border-b border-white pb-1 opacity-0 group-hover:opacity-100 transition-all duration-500">
                     Explore
                   </span>

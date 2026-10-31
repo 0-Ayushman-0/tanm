@@ -11,12 +11,15 @@ import SearchModal from './components/SearchModal';
 import WishlistDrawer from './components/WishlistDrawer';
 import ProductDetailsModal from './components/ProductDetailsModal';
 import CheckoutModal from './components/CheckoutModal';
+import StaticPage from './components/StaticPage';
 import { authApi, cartApi, wishlistApi } from './api';
 import { useToast } from './context/ToastContext';
 
 function App() {
   const toast = useToast();
   const [currentTab, setCurrentTab] = useState('home');
+  const [shopCategoryFilter, setShopCategoryFilter] = useState('');
+  const [policySlug, setPolicySlug] = useState('shipping-returns');
 
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState(null);
@@ -80,7 +83,7 @@ function App() {
     setUser(null);
     setCart(null);
     setWishlist(null);
-    setCurrentTab('home');
+    handleNavigate('home');
     toast.info('You have successfully signed out.');
   };
 
@@ -108,6 +111,44 @@ function App() {
     loadCart();
   };
 
+  // Disable automatic browser scroll restoration so SPA view switches always start at (0, 0)
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  const handleNavigate = (tab, params = {}) => {
+    if (tab === 'shop') {
+      setShopCategoryFilter(params?.categoryId !== undefined ? String(params.categoryId) : '');
+    }
+    if (tab === 'shipping-returns' || tab === 'about' || tab === 'privacy-policy') {
+      setPolicySlug(tab);
+      setCurrentTab('policy');
+    } else if (tab === 'policy') {
+      if (params?.slug) setPolicySlug(params.slug);
+      setCurrentTab('policy');
+    } else {
+      setCurrentTab(tab);
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  };
+
+  // Guarantee that every tab change resets scroll position to the very top immediately and after render
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    const rafId = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, 60);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timer);
+    };
+  }, [currentTab, policySlug]);
+
   const cartCount = cart?.items?.reduce((acc, curr) => acc + curr.quantity, 0) || 0;
   const wishlistCount = wishlist?.items?.length || 0;
 
@@ -120,7 +161,7 @@ function App() {
         wishlistCount={wishlistCount}
         onOpenWishlist={() => setWishlistOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
-        onNavigate={setCurrentTab}
+        onNavigate={handleNavigate}
         currentTab={currentTab}
         user={user}
         onLogout={handleLogout}
@@ -132,12 +173,13 @@ function App() {
         {currentTab === 'home' && (
           <Home
             onSelectProduct={setSelectedProduct}
-            onNavigate={setCurrentTab}
+            onNavigate={handleNavigate}
           />
         )}
         {currentTab === 'shop' && (
           <Shop
             onSelectProduct={setSelectedProduct}
+            initialCategory={shopCategoryFilter}
           />
         )}
         {currentTab === 'cart' && (
@@ -145,7 +187,7 @@ function App() {
             cart={cart}
             onUpdateCart={setCart}
             onOpenCheckout={setCheckoutData}
-            onNavigate={setCurrentTab}
+            onNavigate={handleNavigate}
           />
         )}
         {currentTab === 'profile' && (
@@ -157,10 +199,16 @@ function App() {
         {currentTab === 'admin' && (
           <AdminPortal />
         )}
+        {currentTab === 'policy' && (
+          <StaticPage
+            slug={policySlug}
+            onNavigate={handleNavigate}
+          />
+        )}
       </main>
 
       {/* Shell Footer */}
-      <Footer />
+      <Footer onNavigate={handleNavigate} />
 
       {/* Modals & Dialog Drawers */}
       <SearchModal
@@ -179,7 +227,7 @@ function App() {
       <ProductDetailsModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
-        onNavigate={setCurrentTab}
+        onNavigate={handleNavigate}
         user={user}
         onAddToCart={async (p, qty = 1) => {
           try {
@@ -200,7 +248,7 @@ function App() {
         onOrderSuccess={() => {
           setCheckoutData(null);
           setCart(null);
-          setCurrentTab('profile');
+          handleNavigate('profile');
         }}
         user={user}
         onOpenLogin={() => setLoginOpen(true)}

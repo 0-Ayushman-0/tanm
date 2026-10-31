@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 export default function AdminPortal() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, products, categories, orders, inventory, moderation, cms
-  
+
   // Analytics State
   const [summary, setSummary] = useState(null);
   const [revenueTrends, setRevenueTrends] = useState([]);
@@ -23,6 +23,7 @@ export default function AdminPortal() {
     description: '',
     imageUrl: '',
     displayOrder: 0,
+    isSignatureCollection: false,
   });
 
   // Product Manager State
@@ -81,12 +82,42 @@ export default function AdminPortal() {
   });
   const [annForm, setAnnForm] = useState({
     id: null,
-    content: '',
-    isActive: true
+    text: '',
+    isActive: true,
+    backgroundColor: '#000000',
+    textColor: '#FFFFFF',
+    linkUrl: '',
   });
   const [savingCms, setSavingCms] = useState(false);
 
+  // Dynamic CMS Pages State
+  const [cmsSubTab, setCmsSubTab] = useState('homepage'); // 'homepage' | 'pages'
+  const [cmsPages, setCmsPages] = useState([]);
+  const [_loadingCmsPages, setLoadingCmsPages] = useState(false);
+  const [editingCmsPage, setEditingCmsPage] = useState(null); // null, 'new', or page object
+  const [pageForm, setPageForm] = useState({
+    id: null,
+    title: '',
+    slug: '',
+    content: '',
+    status: 'PUBLISHED',
+  });
+  const [savingPage, setSavingPage] = useState(false);
+
+  // Craft of Patience CMS State
+  const [craftForm, setCraftForm] = useState({
+    image1: 'https://res.cloudinary.com/tanm/image/upload/v1793431372/tanm/cms/ryqx17zfukzuzkqbjtzw.jpg',
+    image2: 'https://res.cloudinary.com/tanm/image/upload/v1793431375/tanm/cms/t0gxzpcotyhlvzbkdfzm.jpg',
+    subtitle: 'Our Philosophy',
+    title: 'The Craft of Patience',
+    description: 'In an era of fleeting trends, TanM stands for the permanent. Each piece is born from a dialogue between artisan and material — a process that cannot be rushed, only perfected through decades of heritage techniques and singular focus.',
+  });
+  const [savingCraft, setSavingCraft] = useState(false);
+  const [uploadingCraft1, setUploadingCraft1] = useState(false);
+  const [uploadingCraft2, setUploadingCraft2] = useState(false);
+
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     if (activeTab === 'dashboard') loadAnalytics();
     if (activeTab === 'products') {
       loadProducts();
@@ -100,6 +131,7 @@ export default function AdminPortal() {
     }
     if (activeTab === 'moderation') loadReviewsQueue();
     if (activeTab === 'cms') loadCmsData();
+    if (activeTab === 'pages') loadCmsPages();
   }, [activeTab, ordersPage]);
 
   const loadAnalytics = async () => {
@@ -173,6 +205,7 @@ export default function AdminPortal() {
         description: categoryForm.description,
         imageUrl: categoryForm.imageUrl,
         displayOrder: parseInt(categoryForm.displayOrder || 0, 10),
+        isSignatureCollection: Boolean(categoryForm.isSignatureCollection),
       };
       if (editingCategory && editingCategory.id) {
         await categoryApi.update(editingCategory.id, payload);
@@ -298,7 +331,7 @@ export default function AdminPortal() {
       } else {
         const created = await productApi.create(payload);
         toast.success('Product created successfully!');
-        
+
         // Process bulk image requests
         const bulkRequests = newProductImages.map((img, idx) => ({
           imageUrl: img.imageUrl,
@@ -460,9 +493,10 @@ export default function AdminPortal() {
   // CMS Studio CRUD Actions
   const loadCmsData = async () => {
     try {
-      const [slidesPage, annPage] = await Promise.all([
+      const [slidesPage, annPage, settingsRes] = await Promise.all([
         adminApi.getCmsHeroSlides(),
-        adminApi.getCmsAnnouncements()
+        adminApi.getCmsAnnouncements(),
+        adminApi.getCmsSettings().catch(() => [])
       ]);
       setSlides(slidesPage.content || []);
       const annList = annPage.content || [];
@@ -470,29 +504,207 @@ export default function AdminPortal() {
       if (annList.length > 0) {
         setAnnForm({
           id: annList[0].id,
-          content: annList[0].content,
-          isActive: annList[0].isActive
+          text: annList[0].text || '',
+          isActive: annList[0].status === 'PUBLISHED',
+          backgroundColor: annList[0].backgroundColor || '#000000',
+          textColor: annList[0].textColor || '#FFFFFF',
+          linkUrl: annList[0].linkUrl || '',
         });
       }
+      if (Array.isArray(settingsRes)) {
+        const map = {};
+        settingsRes.forEach((s) => { map[s.key] = s.value; });
+        setCraftForm((prev) => ({
+          image1: map['craft_image_1'] || prev.image1,
+          image2: map['craft_image_2'] || prev.image2,
+          subtitle: map['craft_subtitle'] || prev.subtitle,
+          title: map['craft_title'] || prev.title,
+          description: map['craft_description'] || prev.description,
+        }));
+      }
+      loadCmsPages();
     } catch (err) {
       console.error('CMS load failed', err);
     }
   };
 
-  const handleSaveAnnouncement = async (e) => {
+  const loadCmsPages = async () => {
+    setLoadingCmsPages(true);
+    try {
+      const res = await adminApi.getCmsPages(0, 50);
+      setCmsPages(res?.content || []);
+    } catch (err) {
+      console.warn('CMS pages load failed', err);
+    } finally {
+      setLoadingCmsPages(false);
+    }
+  };
+
+  const handleOpenEditPage = (pageItem) => {
+    if (pageItem && pageItem.id) {
+      setPageForm({
+        id: pageItem.id,
+        title: pageItem.title || '',
+        slug: pageItem.slug || '',
+        content: pageItem.content || '',
+        status: pageItem.status || 'PUBLISHED',
+      });
+      setEditingCmsPage(pageItem);
+    } else if (pageItem && pageItem.slug) {
+      const existing = cmsPages.find((p) => p.slug === pageItem.slug);
+      if (existing) {
+        setPageForm({
+          id: existing.id,
+          title: existing.title || pageItem.title,
+          slug: existing.slug || pageItem.slug,
+          content: existing.content || '',
+          status: existing.status || 'PUBLISHED',
+        });
+        setEditingCmsPage(existing);
+      } else {
+        setPageForm({
+          id: null,
+          title: pageItem.title || '',
+          slug: pageItem.slug || '',
+          content: pageItem.defaultContent || '',
+          status: 'PUBLISHED',
+        });
+        setEditingCmsPage(pageItem);
+      }
+    } else {
+      setPageForm({
+        id: null,
+        title: '',
+        slug: '',
+        content: '',
+        status: 'PUBLISHED',
+      });
+      setEditingCmsPage('new');
+    }
+  };
+
+  const handleSavePage = async (e) => {
+    if (e) e.preventDefault();
+    setSavingPage(true);
+    try {
+      const cleanedSlug = pageForm.slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-');
+      const payload = {
+        title: pageForm.title,
+        slug: cleanedSlug,
+        content: pageForm.content,
+        status: pageForm.status || 'PUBLISHED',
+      };
+
+      let saved;
+      if (pageForm.id) {
+        saved = await adminApi.updateCmsPage(pageForm.id, payload);
+      } else {
+        const existing = cmsPages.find((p) => p.slug === cleanedSlug);
+        if (existing) {
+          saved = await adminApi.updateCmsPage(existing.id, payload);
+        } else {
+          saved = await adminApi.createCmsPage(payload);
+        }
+      }
+
+      if (saved && saved.id && payload.status === 'PUBLISHED') {
+        try {
+          await adminApi.publishCmsPage(saved.id);
+        } catch {
+          // ignore if already published
+        }
+      }
+
+      toast.success(`Page "${payload.title}" saved and published successfully!`);
+      setEditingCmsPage(null);
+      loadCmsPages();
+    } catch (err) {
+      toast.error(err.message || 'Failed to save page');
+    } finally {
+      setSavingPage(false);
+    }
+  };
+
+  const handleDeletePage = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+    try {
+      await adminApi.deleteCmsPage(id);
+      toast.success('Page deleted successfully');
+      loadCmsPages();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete page');
+    }
+  };
+
+  const handleSaveCraftSection = async (e) => {
     e.preventDefault();
+    setSavingCraft(true);
+    try {
+      const payload = [
+        { key: 'craft_image_1', value: craftForm.image1, settingGroup: 'craft_section', valueType: 'IMAGE_URL' },
+        { key: 'craft_image_2', value: craftForm.image2, settingGroup: 'craft_section', valueType: 'IMAGE_URL' },
+        { key: 'craft_subtitle', value: craftForm.subtitle, settingGroup: 'craft_section', valueType: 'STRING' },
+        { key: 'craft_title', value: craftForm.title, settingGroup: 'craft_section', valueType: 'STRING' },
+        { key: 'craft_description', value: craftForm.description, settingGroup: 'craft_section', valueType: 'TEXT' },
+      ];
+      await adminApi.updateBulkCmsSettings(payload);
+      toast.success('"The Craft of Patience" section saved successfully!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save section settings');
+    } finally {
+      setSavingCraft(false);
+    }
+  };
+
+  const handleSaveAnnouncement = async (e) => {
+    if (e) e.preventDefault();
     setSavingCms(true);
     try {
+      const payload = {
+        text: annForm.text || 'Free Shipping on Orders Over ₹5,000 · Use Code TANM10',
+        status: annForm.isActive ? 'PUBLISHED' : 'DRAFT',
+        backgroundColor: annForm.backgroundColor || '#000000',
+        textColor: annForm.textColor || '#FFFFFF',
+        linkUrl: annForm.linkUrl || null,
+      };
       if (annForm.id) {
-        await adminApi.updateCmsAnnouncement(annForm.id, annForm);
+        await adminApi.updateCmsAnnouncement(annForm.id, payload);
       } else {
-        const created = await adminApi.createCmsAnnouncement(annForm);
-        setAnnForm(created);
+        const created = await adminApi.createCmsAnnouncement(payload);
+        setAnnForm((prev) => ({ ...prev, id: created.id }));
       }
-      toast.success('Store announcement saved successfully!');
+      toast.success(annForm.isActive ? 'Store announcement saved and live!' : 'Store announcement saved (currently OFF)');
       loadCmsData();
     } catch (err) {
       toast.error(err.message || 'Failed to save announcement bar');
+    } finally {
+      setSavingCms(false);
+    }
+  };
+
+  const handleToggleAnnouncementActive = async () => {
+    const nextState = !annForm.isActive;
+    setAnnForm((prev) => ({ ...prev, isActive: nextState }));
+    setSavingCms(true);
+    try {
+      const payload = {
+        text: annForm.text || 'Free Shipping on Orders Over ₹5,000 · Use Code TANM10',
+        status: nextState ? 'PUBLISHED' : 'DRAFT',
+        backgroundColor: annForm.backgroundColor || '#000000',
+        textColor: annForm.textColor || '#FFFFFF',
+        linkUrl: annForm.linkUrl || null,
+      };
+      if (annForm.id) {
+        await adminApi.updateCmsAnnouncement(annForm.id, payload);
+      } else {
+        const created = await adminApi.createCmsAnnouncement(payload);
+        setAnnForm((prev) => ({ ...prev, id: created.id }));
+      }
+      toast.success(nextState ? 'Storefront Announcement Bar turned ON!' : 'Storefront Announcement Bar turned OFF!');
+      loadCmsData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to toggle announcement bar');
+      setAnnForm((prev) => ({ ...prev, isActive: !nextState }));
     } finally {
       setSavingCms(false);
     }
@@ -551,7 +763,7 @@ export default function AdminPortal() {
 
   return (
     <div className="flex bg-background text-on-surface min-h-screen">
-      
+
       {/* Left Sidebar Navigation Shell */}
       <aside className="h-screen w-72 fixed left-0 top-0 overflow-y-auto bg-surface border-r border-outline-variant/20 z-50 py-8 px-6 flex flex-col justify-between">
         <div className="space-y-8 text-left">
@@ -587,23 +799,39 @@ export default function AdminPortal() {
               { id: 'inventory', label: 'Inventory', icon: 'inventory_2' },
               { id: 'moderation', label: 'Moderation', icon: 'reviews' },
               { id: 'cms', label: 'CMS Studio', icon: 'edit_note' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setEditingSlide(null);
-                }}
-                className={`w-full flex items-center gap-4 py-3 px-4 transition-all duration-300 rounded ${
-                  activeTab === tab.id
+              { id: 'pages', label: 'Pages & Policies', icon: 'article' },
+            ].map((tab) => {
+              const isSelected =
+                (tab.id === 'pages' && (activeTab === 'pages' || (activeTab === 'cms' && cmsSubTab === 'pages'))) ||
+                (tab.id === 'cms' && activeTab === 'cms' && cmsSubTab === 'homepage') ||
+                (tab.id !== 'pages' && tab.id !== 'cms' && activeTab === tab.id);
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (tab.id === 'pages') {
+                      setActiveTab('cms');
+                      setCmsSubTab('pages');
+                      setEditingCmsPage(null);
+                    } else if (tab.id === 'cms') {
+                      setActiveTab('cms');
+                      setCmsSubTab('homepage');
+                    } else {
+                      setActiveTab(tab.id);
+                    }
+                    setEditingSlide(null);
+                  }}
+                  className={`w-full flex items-center gap-4 py-3 px-4 transition-all duration-300 rounded ${isSelected
                     ? 'text-primary bg-secondary-container/20 font-bold border-r-2 border-primary'
                     : 'text-on-surface-variant hover:text-primary hover:bg-secondary-container/10'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
-                <span className="font-label-sm text-xs uppercase tracking-wider">{tab.label}</span>
-              </button>
-            ))}
+                    }`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
+                  <span className="font-label-sm text-xs uppercase tracking-wider">{tab.label}</span>
+                </button>
+              );
+            })}
           </nav>
         </div>
 
@@ -658,7 +886,7 @@ export default function AdminPortal() {
       {/* Main Content Canvas */}
       <main className="ml-72 pt-20 flex-grow min-h-screen text-left">
         <div className="px-12 py-12 max-w-[1440px] mx-auto">
-          
+
           {/* TAB 1: EXECUTIVE ANALYTICS DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div className="space-y-12">
@@ -1080,9 +1308,8 @@ export default function AdminPortal() {
                                         prev.map((item, i) => ({ ...item, isPrimary: i === idx }))
                                       );
                                     }}
-                                    className={`font-bold px-1.5 py-0.5 rounded ${
-                                      img.isPrimary ? 'bg-primary text-surface' : 'text-on-surface-variant hover:text-primary'
-                                    }`}
+                                    className={`font-bold px-1.5 py-0.5 rounded ${img.isPrimary ? 'bg-primary text-surface' : 'text-on-surface-variant hover:text-primary'
+                                      }`}
                                   >
                                     {img.isPrimary ? 'PRIMARY' : 'Set Primary'}
                                   </button>
@@ -1333,58 +1560,58 @@ export default function AdminPortal() {
 
                           return filtered.map((p) => (
                             <tr key={p.id} className="hover:bg-surface-container-low transition-colors">
-                            <td className="p-4 flex items-center gap-3">
-                              <img
-                                src={p.mainImageUrl || 'https://picsum.photos/seed/placeholder/200/200'}
-                                alt={p.name}
-                                className="w-12 h-12 object-cover rounded border border-outline-variant/30"
-                              />
-                              <div>
-                                <p className="font-bold text-primary text-sm">{p.name}</p>
-                                <p className="text-[10px] text-on-surface-variant">SKU: {p.sku}</p>
-                              </div>
-                            </td>
-                            <td className="p-4">{p.category?.name || 'Uncategorized'}</td>
-                            <td className="p-4 font-bold text-primary">₹{p.price}</td>
-                            <td className="p-4 font-bold">{p.stockQuantity} pcs</td>
-                            <td className="p-4">
-                              {(p.isFeatured || p.featured) ? (
-                                <span className="bg-secondary-container text-on-secondary-container font-bold text-[9px] px-2 py-0.5 rounded">
-                                  FEATURED
+                              <td className="p-4 flex items-center gap-3">
+                                <img
+                                  src={p.mainImageUrl || 'https://picsum.photos/seed/placeholder/200/200'}
+                                  alt={p.name}
+                                  className="w-12 h-12 object-cover rounded border border-outline-variant/30"
+                                />
+                                <div>
+                                  <p className="font-bold text-primary text-sm">{p.name}</p>
+                                  <p className="text-[10px] text-on-surface-variant">SKU: {p.sku}</p>
+                                </div>
+                              </td>
+                              <td className="p-4">{p.category?.name || 'Uncategorized'}</td>
+                              <td className="p-4 font-bold text-primary">₹{p.price}</td>
+                              <td className="p-4 font-bold">{p.stockQuantity} pcs</td>
+                              <td className="p-4">
+                                {(p.isFeatured || p.featured) ? (
+                                  <span className="bg-secondary-container text-on-secondary-container font-bold text-[9px] px-2 py-0.5 rounded">
+                                    FEATURED
+                                  </span>
+                                ) : (
+                                  <span className="text-on-surface-variant/50 text-[10px]">—</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                <span className={`font-bold text-[9px] px-2 py-0.5 rounded ${p.status === 'PUBLISHED' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
+                                  {p.status}
                                 </span>
-                              ) : (
-                                <span className="text-on-surface-variant/50 text-[10px]">—</span>
-                              )}
-                            </td>
-                            <td className="p-4">
-                              <span className={`font-bold text-[9px] px-2 py-0.5 rounded ${p.status === 'PUBLISHED' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
-                                {p.status}
-                              </span>
-                            </td>
-                            <td className="p-4 text-right">
-                              <button
-                                onClick={() => handleEditProduct(p)}
-                                className="bg-secondary text-surface px-3 py-1 rounded text-[10px] uppercase font-bold mr-2 hover:opacity-90"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProduct(p.id)}
-                                className="bg-error text-surface px-3 py-1 rounded text-[10px] uppercase font-bold hover:opacity-90"
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
+                              </td>
+                              <td className="p-4 text-right">
+                                <button
+                                  onClick={() => handleEditProduct(p)}
+                                  className="bg-secondary text-surface px-3 py-1 rounded text-[10px] uppercase font-bold mr-2 hover:opacity-90"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(p.id)}
+                                  className="bg-error text-surface px-3 py-1 rounded text-[10px] uppercase font-bold hover:opacity-90"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
           {/* TAB: CATEGORIES MANAGER */}
           {activeTab === 'categories' && (
@@ -1402,7 +1629,7 @@ export default function AdminPortal() {
                   <button
                     onClick={() => {
                       setEditingCategory('new');
-                      setCategoryForm({ name: '', description: '', imageUrl: '', displayOrder: categories.length + 1 });
+                      setCategoryForm({ name: '', description: '', imageUrl: '', displayOrder: categories.length + 1, isSignatureCollection: false });
                     }}
                     className="bg-primary text-surface px-6 py-3 font-label-sm text-xs uppercase tracking-widest font-bold hover:bg-primary-container transition-all"
                   >
@@ -1503,6 +1730,19 @@ export default function AdminPortal() {
                       />
                     </div>
 
+                    <div className="flex items-center gap-3 p-3 bg-surface border border-outline-variant/30 rounded">
+                      <input
+                        type="checkbox"
+                        id="isSignatureCollection"
+                        checked={categoryForm.isSignatureCollection}
+                        onChange={(e) => setCategoryForm({ ...categoryForm, isSignatureCollection: e.target.checked })}
+                        className="w-4 h-4 accent-primary cursor-pointer"
+                      />
+                      <label htmlFor="isSignatureCollection" className="uppercase font-bold text-on-surface cursor-pointer select-none">
+                        Feature in Signature Collections (Homepage)
+                      </label>
+                    </div>
+
                     <div className="flex gap-4 pt-4 border-t border-outline-variant/20">
                       <button
                         type="submit"
@@ -1532,30 +1772,44 @@ export default function AdminPortal() {
                         <th className="p-4">Slug</th>
                         <th className="p-4">Description</th>
                         <th className="p-4">Display Order</th>
+                        <th className="p-4">Signature Collection</th>
                         <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/20">
                       {loadingCategories ? (
                         <tr>
-                          <td colSpan={5} className="p-8 text-center text-on-surface-variant">Loading categories...</td>
+                          <td colSpan={6} className="p-8 text-center text-on-surface-variant">Loading categories...</td>
                         </tr>
                       ) : categories.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="p-8 text-center text-on-surface-variant">No categories found.</td>
+                          <td colSpan={6} className="p-8 text-center text-on-surface-variant">No categories found.</td>
                         </tr>
                       ) : (
                         categories.map((c) => (
                           <tr key={c.id} className="hover:bg-surface-container-low transition-colors">
                             <td className="p-4 flex items-center gap-3">
-                              {c.imageUrl && (
+                              {c.imageUrl ? (
                                 <img src={c.imageUrl} alt={c.name} className="w-10 h-10 object-cover rounded border border-outline-variant/30" />
+                              ) : (
+                                <div className="w-10 h-10 bg-surface-container rounded border border-outline-variant/30 flex items-center justify-center text-on-surface-variant shrink-0">
+                                  <span className="material-symbols-outlined text-[18px] opacity-40">folder</span>
+                                </div>
                               )}
                               <span className="font-bold text-primary text-sm">{c.name}</span>
                             </td>
                             <td className="p-4 text-on-surface-variant">{c.slug}</td>
                             <td className="p-4 text-on-surface-variant">{c.description || '—'}</td>
                             <td className="p-4 font-bold">{c.displayOrder}</td>
+                            <td className="p-4">
+                              {c.signatureCollection || c.isSignatureCollection ? (
+                                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                  ★ Signature
+                                </span>
+                              ) : (
+                                <span className="text-on-surface-variant text-[11px]">—</span>
+                              )}
+                            </td>
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => {
@@ -1565,6 +1819,7 @@ export default function AdminPortal() {
                                     description: c.description || '',
                                     imageUrl: c.imageUrl || '',
                                     displayOrder: c.displayOrder || 0,
+                                    isSignatureCollection: Boolean(c.signatureCollection ?? c.isSignatureCollection ?? false),
                                   });
                                 }}
                                 className="bg-secondary text-surface px-3 py-1 rounded text-[10px] uppercase font-bold mr-2 hover:opacity-90"
@@ -1640,46 +1895,45 @@ export default function AdminPortal() {
                               <td className="py-6 text-on-surface-variant">
                                 {ord.orderedAt || ord.createdAt ? new Date(ord.orderedAt || ord.createdAt).toLocaleDateString() : 'N/A'}
                               </td>
-                               <td className="py-6 font-semibold">
-                                 <div>{ord.userName || ord.customerName || ord.shippingFullName || 'Guest User'}</div>
-                                 {ord.userEmail && (
-                                   <div className="text-[10px] text-on-surface-variant font-normal">{ord.userEmail}</div>
-                                 )}
-                               </td>
+                              <td className="py-6 font-semibold">
+                                <div>{ord.userName || ord.customerName || ord.shippingFullName || 'Guest User'}</div>
+                                {ord.userEmail && (
+                                  <div className="text-[10px] text-on-surface-variant font-normal">{ord.userEmail}</div>
+                                )}
+                              </td>
                               <td className="py-6">
-                                <span className={`px-2.5 py-1 border font-bold text-[9px] tracking-widest uppercase rounded ${
-                                  ord.fulfillmentStatus === 'DELIVERED'
-                                    ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600'
-                                    : ord.fulfillmentStatus === 'CANCELLED'
+                                <span className={`px-2.5 py-1 border font-bold text-[9px] tracking-widest uppercase rounded ${ord.fulfillmentStatus === 'DELIVERED'
+                                  ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600'
+                                  : ord.fulfillmentStatus === 'CANCELLED'
                                     ? 'border-error/20 bg-error/5 text-error'
                                     : 'border-primary/20 bg-primary/5 text-primary'
-                                }`}>
+                                  }`}>
                                   {ord.fulfillmentStatus}
                                 </span>
                               </td>
                               <td className="py-6 text-right font-bold">₹{ord.grandTotal.toFixed(2)}</td>
                               <td className="py-6 text-center">
-                                 <div className="flex justify-center items-center gap-2">
-                                   <button
-                                     onClick={() => handleInspectOrder(ord)}
-                                     className="bg-primary text-surface hover:bg-primary-container px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1"
-                                   >
-                                     <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                     Inspect
-                                   </button>
-                                   <select
-                                     value={ord.fulfillmentStatus}
-                                     onChange={(e) => handleUpdateOrderStatus(ord.orderNumber, e.target.value)}
-                                     className="bg-surface border border-outline/25 rounded p-1 text-[10px] text-on-surface font-semibold focus:ring-1 focus:ring-primary outline-none"
-                                   >
-                                     <option value="PENDING">PENDING</option>
-                                     <option value="CONFIRMED">CONFIRMED</option>
-                                     <option value="SHIPPED">SHIPPED</option>
-                                     <option value="DELIVERED">DELIVERED</option>
-                                     <option value="CANCELLED">CANCELLED</option>
-                                   </select>
-                                 </div>
-                               </td>
+                                <div className="flex justify-center items-center gap-2">
+                                  <button
+                                    onClick={() => handleInspectOrder(ord)}
+                                    className="bg-primary text-surface hover:bg-primary-container px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                    Inspect
+                                  </button>
+                                  <select
+                                    value={ord.fulfillmentStatus}
+                                    onChange={(e) => handleUpdateOrderStatus(ord.orderNumber, e.target.value)}
+                                    className="bg-surface border border-outline/25 rounded p-1 text-[10px] text-on-surface font-semibold focus:ring-1 focus:ring-primary outline-none"
+                                  >
+                                    <option value="PENDING">PENDING</option>
+                                    <option value="CONFIRMED">CONFIRMED</option>
+                                    <option value="SHIPPED">SHIPPED</option>
+                                    <option value="DELIVERED">DELIVERED</option>
+                                    <option value="CANCELLED">CANCELLED</option>
+                                  </select>
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1719,7 +1973,7 @@ export default function AdminPortal() {
           {/* TAB 3: INVENTORY STOCK ADJUSTMENT */}
           {activeTab === 'inventory' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-xs font-medium">
-              
+
               {/* Stock Adjustment Action Panel */}
               <div className="lg:col-span-4 bg-surface-container-low p-6 rounded border border-outline-variant/15 h-fit space-y-6">
                 <h3 className="font-headline-md text-lg text-primary font-bold">Adjust Stock Level</h3>
@@ -1811,9 +2065,8 @@ export default function AdminPortal() {
                       </div>
                       <div className="text-right flex flex-col justify-center">
                         <span
-                          className={`font-semibold text-sm ${
-                            log.quantityChanged >= 0 ? 'text-secondary' : 'text-error'
-                          }`}
+                          className={`font-semibold text-sm ${log.quantityChanged >= 0 ? 'text-secondary' : 'text-error'
+                            }`}
                         >
                           {log.quantityChanged >= 0 ? `+${log.quantityChanged}` : log.quantityChanged}
                         </span>
@@ -1887,56 +2140,204 @@ export default function AdminPortal() {
           )}
 
           {/* TAB 5: HEADLESS CMS EDITOR STUDIO */}
-          {activeTab === 'cms' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-xs font-medium">
-              
+          {(activeTab === 'cms' || activeTab === 'pages') && (
+            <div className="space-y-6 text-xs font-medium">
+
+              {/* Sub-navigation: Storefront Elements vs Dynamic Pages */}
+              <div className="flex flex-wrap items-center justify-between gap-4 bg-surface p-4 rounded border border-outline-variant/15 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setCmsSubTab('homepage'); setEditingCmsPage(null); }}
+                    className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+                      cmsSubTab === 'homepage'
+                        ? 'bg-primary text-surface shadow-sm'
+                        : 'bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-surface-container'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">view_quilt</span>
+                    Storefront & Banners
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCmsSubTab('pages')}
+                    className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+                      cmsSubTab === 'pages'
+                        ? 'bg-primary text-surface shadow-sm'
+                        : 'bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-surface-container'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">article</span>
+                    Dynamic Pages & Policies (3)
+                  </button>
+                </div>
+
+                {cmsSubTab === 'pages' && !editingCmsPage && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditPage(null)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-primary text-surface text-xs font-bold uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shadow-sm cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add</span>
+                    Create Custom Page
+                  </button>
+                )}
+              </div>
+
+              {cmsSubTab === 'homepage' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
               {/* Left Column: Announcement configuration panel */}
               <div className="lg:col-span-5 bg-surface-container-low p-6 rounded border border-outline-variant/15 h-fit space-y-6">
-                <h3 className="font-headline-md text-lg text-primary font-bold">Storefront Announcement Bar</h3>
-                <form onSubmit={handleSaveAnnouncement} className="space-y-4">
+                <div className="flex items-center justify-between border-b border-outline-variant/15 pb-4">
                   <div>
-                    <label className="block font-semibold mb-1 text-on-surface-variant">Banner Content Text</label>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-secondary block mb-1">
+                      Storefront Top Banner
+                    </span>
+                    <h3 className="font-headline-md text-lg text-primary font-bold">
+                      Announcement Bar
+                    </h3>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      annForm.isActive
+                        ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30'
+                        : 'bg-outline-variant/20 text-on-surface-variant border border-outline-variant/30'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${annForm.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                    {annForm.isActive ? 'ON / Active' : 'OFF / Inactive'}
+                  </span>
+                </div>
+
+                {/* Direct On/Off Toggle Button */}
+                <div className="flex items-center justify-between p-4 bg-surface rounded border border-outline-variant/20 shadow-sm">
+                  <div>
+                    <p className="font-bold text-xs text-primary">Storefront Display</p>
+                    <p className="text-[11px] text-on-surface-variant">
+                      {annForm.isActive ? 'Banner is live and visible on homepage' : 'Banner is disabled and hidden'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleAnnouncementActive}
+                    disabled={savingCms}
+                    className={`flex items-center gap-2 px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                      annForm.isActive
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                        : 'bg-surface-variant hover:bg-outline-variant/30 text-on-surface-variant border border-outline-variant/40'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {annForm.isActive ? 'toggle_on' : 'toggle_off'}
+                    </span>
+                    <span>{annForm.isActive ? 'TURN OFF' : 'TURN ON'}</span>
+                  </button>
+                </div>
+
+                {/* Live Preview Box */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block font-semibold text-on-surface-variant text-[11px] uppercase tracking-wider">
+                      Storefront Live Preview
+                    </label>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                        annForm.isActive ? 'bg-emerald-500/15 text-emerald-700' : 'bg-neutral-500/15 text-neutral-600'
+                      }`}
+                    >
+                      {annForm.isActive ? '● Live on Storefront' : '○ Disabled & Hidden'}
+                    </span>
+                  </div>
+
+                  {annForm.isActive ? (
+                    <div
+                      className="p-3 text-center rounded text-xs font-semibold uppercase tracking-widest shadow-sm border border-black/10"
+                      style={{
+                        backgroundColor: annForm.backgroundColor || '#000000',
+                        color: annForm.textColor || '#FFFFFF',
+                      }}
+                    >
+                      <span>{annForm.text || 'Free Shipping on Orders Over ₹5,000 · Use Code TANM10'}</span>
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center rounded text-xs font-medium bg-surface border border-outline-variant/30 text-on-surface-variant flex items-center justify-center gap-2 shadow-inner">
+                      <span className="material-symbols-outlined text-[18px] text-on-surface-variant/70">visibility_off</span>
+                      <span>Banner is currently turned off and will not appear to customers</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Form to update content text */}
+                <form onSubmit={handleSaveAnnouncement} className="space-y-4 pt-2 border-t border-outline-variant/15">
+                  <div>
+                    <label className="block font-semibold mb-1 text-on-surface-variant text-[11px] uppercase tracking-wider">
+                      Banner Message Text
+                    </label>
                     <input
                       type="text"
                       required
-                      value={annForm.content}
-                      onChange={(e) => setAnnForm({ ...annForm, content: e.target.value })}
-                      placeholder="e.g. Free complimentary worldwide shipping on all autumn briefcases"
-                      className="w-full bg-surface border border-outline/25 rounded p-2 text-on-surface"
+                      value={annForm.text}
+                      onChange={(e) => setAnnForm({ ...annForm, text: e.target.value })}
+                      placeholder="e.g. Free shipping on all luxury totes this weekend"
+                      className="w-full bg-surface border border-outline/25 rounded p-2.5 text-on-surface focus:outline-none focus:border-primary text-xs"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="annActive"
-                      checked={annForm.isActive}
-                      onChange={(e) => setAnnForm({ ...annForm, isActive: e.target.checked })}
-                      className="text-primary focus:ring-primary h-4 w-4 rounded border-outline/25"
-                    />
-                    <label htmlFor="annActive" className="font-semibold text-on-surface-variant cursor-pointer">
-                      Enable Banner Display
-                    </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold mb-1 text-on-surface-variant text-[11px] uppercase tracking-wider">
+                        Background Color
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={annForm.backgroundColor || '#000000'}
+                          onChange={(e) => setAnnForm({ ...annForm, backgroundColor: e.target.value })}
+                          className="h-8 w-10 p-0 rounded border border-outline/25 cursor-pointer bg-transparent"
+                        />
+                        <span className="text-xs font-mono text-on-surface-variant">{annForm.backgroundColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block font-semibold mb-1 text-on-surface-variant text-[11px] uppercase tracking-wider">
+                        Text Color
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={annForm.textColor || '#FFFFFF'}
+                          onChange={(e) => setAnnForm({ ...annForm, textColor: e.target.value })}
+                          className="h-8 w-10 p-0 rounded border border-outline/25 cursor-pointer bg-transparent"
+                        />
+                        <span className="text-xs font-mono text-on-surface-variant">{annForm.textColor}</span>
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={savingCms}
-                    className="w-full bg-primary text-surface py-2 rounded font-bold uppercase tracking-wider"
-                  >
-                    {savingCms ? 'Saving...' : 'Save Announcement Bar'}
-                  </button>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={savingCms}
+                      className="w-full bg-primary text-surface py-2.5 rounded font-bold uppercase tracking-wider text-xs hover:bg-primary-container transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                    >
+                      {savingCms ? 'Saving Announcement...' : 'Save Banner Changes'}
+                    </button>
+                  </div>
                 </form>
               </div>
 
               {/* Right Column: Hero Slider management list */}
               <div className="lg:col-span-7 bg-surface-container-low p-6 rounded border border-outline-variant/15 space-y-6">
                 <h3 className="font-headline-md text-lg text-primary font-bold">Hero Slides Editor</h3>
-                
+
                 {/* Editor slide form */}
                 <form onSubmit={handleSaveHeroSlide} className="bg-surface p-4 rounded border border-outline-variant/10 space-y-4">
                   <h4 className="font-semibold text-sm text-primary font-bold">
                     {editingSlide ? 'Edit Slide Configs' : 'Create New Banner Slide'}
                   </h4>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block font-semibold mb-1 text-on-surface-variant">Slide Header Title</label>
@@ -2075,6 +2476,476 @@ export default function AdminPortal() {
 
               </div>
 
+              {/* Row 2: "The Craft of Patience" Section Editor */}
+              <div className="lg:col-span-12 bg-surface-container-low p-6 rounded border border-outline-variant/15 space-y-6">
+                <div className="flex justify-between items-center border-b border-outline-variant/20 pb-4">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-secondary block">
+                      Homepage Brand Story
+                    </span>
+                    <h3 className="font-headline-md text-xl text-primary font-bold">
+                      Section Editor
+                    </h3>
+                  </div>
+                  <span className="text-[10px] bg-secondary/10 text-secondary border border-secondary/20 px-3 py-1 rounded font-bold uppercase">
+                    Live CMS Control
+                  </span>
+                </div>
+
+                <form onSubmit={handleSaveCraftSection} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Image 1 (Artisan at work) */}
+                    <div className="bg-surface p-5 rounded border border-outline-variant/15 space-y-3">
+                      <label className="block font-bold uppercase tracking-wider text-[10px] text-on-surface-variant">
+                        Primary Image (Artisan At Work)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          required
+                          value={craftForm.image1}
+                          onChange={(e) => setCraftForm({ ...craftForm, image1: e.target.value })}
+                          className="flex-1 bg-surface-container border border-outline/25 rounded p-2.5 text-xs text-on-surface focus:outline-none focus:border-primary"
+                          placeholder="Cloudinary Image URL..."
+                        />
+                        <label className="bg-primary text-surface px-4 py-2.5 rounded cursor-pointer font-bold text-xs flex items-center gap-1.5 hover:bg-primary-container shrink-0 transition-all">
+                          <span className="material-symbols-outlined text-sm">cloud_upload</span>
+                          {uploadingCraft1 ? 'Uploading...' : 'Upload'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingCraft1}
+                            onChange={async (e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                setUploadingCraft1(true);
+                                try {
+                                  const uploaded = await uploadApi.uploadImage(file, 'cms');
+                                  setCraftForm((prev) => ({ ...prev, image1: uploaded.url }));
+                                  toast.success('Image 1 uploaded to Cloudinary!');
+                                } catch (err) {
+                                  toast.error(err.message || 'Upload failed');
+                                } finally {
+                                  setUploadingCraft1(false);
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {craftForm.image1 && (
+                        <div className="relative h-48 rounded overflow-hidden border border-outline-variant/30 shadow-inner">
+                          <img src={craftForm.image1} alt="Craft 1 Preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Image 2 (Leather detail) */}
+                    <div className="bg-surface p-5 rounded border border-outline-variant/15 space-y-3">
+                      <label className="block font-bold uppercase tracking-wider text-[10px] text-on-surface-variant">
+                        Secondary Image (Detail & Tools Overlay)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          required
+                          value={craftForm.image2}
+                          onChange={(e) => setCraftForm({ ...craftForm, image2: e.target.value })}
+                          className="flex-1 bg-surface-container border border-outline/25 rounded p-2.5 text-xs text-on-surface focus:outline-none focus:border-primary"
+                          placeholder="Cloudinary Image URL..."
+                        />
+                        <label className="bg-primary text-surface px-4 py-2.5 rounded cursor-pointer font-bold text-xs flex items-center gap-1.5 hover:bg-primary-container shrink-0 transition-all">
+                          <span className="material-symbols-outlined text-sm">cloud_upload</span>
+                          {uploadingCraft2 ? 'Uploading...' : 'Upload'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingCraft2}
+                            onChange={async (e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                setUploadingCraft2(true);
+                                try {
+                                  const uploaded = await uploadApi.uploadImage(file, 'cms');
+                                  setCraftForm((prev) => ({ ...prev, image2: uploaded.url }));
+                                  toast.success('Image 2 uploaded to Cloudinary!');
+                                } catch (err) {
+                                  toast.error(err.message || 'Upload failed');
+                                } finally {
+                                  setUploadingCraft2(false);
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {craftForm.image2 && (
+                        <div className="relative h-48 rounded overflow-hidden border border-outline-variant/30 shadow-inner">
+                          <img src={craftForm.image2} alt="Craft 2 Preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Text inputs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold mb-1 text-on-surface-variant uppercase text-[10px] tracking-wider">
+                        Philosophy Subtitle Tag
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={craftForm.subtitle}
+                        onChange={(e) => setCraftForm({ ...craftForm, subtitle: e.target.value })}
+                        className="w-full bg-surface border border-outline/25 rounded p-2.5 text-on-surface focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold mb-1 text-on-surface-variant uppercase text-[10px] tracking-wider">
+                        Section Headline Title
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={craftForm.title}
+                        onChange={(e) => setCraftForm({ ...craftForm, title: e.target.value })}
+                        className="w-full bg-surface border border-outline/25 rounded p-2.5 text-on-surface focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-1 text-on-surface-variant uppercase text-[10px] tracking-wider">
+                      Philosophy Narrative Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={craftForm.description}
+                      onChange={(e) => setCraftForm({ ...craftForm, description: e.target.value })}
+                      className="w-full bg-surface border border-outline/25 rounded p-2.5 text-on-surface focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={savingCraft}
+                      className="bg-primary text-surface px-8 py-3 rounded font-bold uppercase tracking-wider text-xs hover:bg-primary-container transition-all cursor-pointer"
+                    >
+                      {savingCraft ? 'Saving Changes...' : 'Save Section'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              </div>
+              )}
+
+              {/* SUB-VIEW 2: DYNAMIC PAGES & POLICIES STUDIO */}
+              {cmsSubTab === 'pages' && (
+                <div className="space-y-6">
+                  {editingCmsPage ? (
+                    /* Page Editor View */
+                    <div className="bg-surface-container-low p-6 md:p-8 rounded border border-outline-variant/15 space-y-6">
+                      <div className="flex flex-wrap items-center justify-between border-b border-outline-variant/15 pb-4 gap-4">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setEditingCmsPage(null)}
+                            className="p-1.5 rounded hover:bg-surface text-on-surface-variant hover:text-primary cursor-pointer flex items-center justify-center transition-all"
+                            title="Back to pages list"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                          </button>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-secondary block">
+                              CMS Content Editor
+                            </span>
+                            <h3 className="font-headline-md text-lg text-primary font-bold">
+                              {pageForm.id ? `Editing: ${pageForm.title}` : (pageForm.title ? `Customize: ${pageForm.title}` : 'Create New Dynamic Page')}
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const defaultTemplate = {
+                                'shipping-returns': `<h3>Payment Notice</h3>\n<p>There is no COD. For customised products, there will be 50% advance payment and rest 50% payment should be done before dispatch.</p>\n\n<h3>Exchange Policy</h3>\n<ol>\n  <li><strong>Exchange Period:</strong> Customers can request an exchange within 10 days of receiving their order.</li>\n  <li><strong>Eligible Products:</strong> Products are eligible for exchange only if they are unworn, undamaged, and returned in their original condition.</li>\n  <li><strong>Original Packaging:</strong> Products must be returned with their original packaging, tags, dust bags, accessories, and invoice.</li>\n  <li><strong>Product Condition:</strong> Signs of use or damage will not be accepted.</li>\n  <li><strong>Leather Products:</strong> Natural variations in grain/colour are not manufacturing defects.</li>\n  <li><strong>Defects:</strong> Contact TANM within 48 hours of delivery with photos/videos.</li>\n  <li><strong>Inspection:</strong> Subject to atelier approval.</li>\n  <li><strong>Shipping Charges:</strong> Customer covers return for change of mind; TANM covers for defects.</li>\n  <li><strong>Availability:</strong> Exchanges subject to stock.</li>\n  <li><strong>Sale Items:</strong> Non-exchangeable unless defective.</li>\n  <li><strong>Bespoke Items:</strong> Customised products cannot be exchanged for change of mind.</li>\n  <li><strong>How to Request:</strong> Email support@tanm.in or WhatsApp.</li>\n  <li><strong>Processing:</strong> Dispatched in 5–7 business days upon inspection.</li>\n  <li><strong>Refunds:</strong> Exchanges do not automatically qualify for refunds.</li>\n  <li><strong>Compliance:</strong> TANM reserves right to reject non-compliant returns.</li>\n  <li><strong>Payment:</strong> No COD, 50% advance on custom products.</li>\n</ol>`,
+                                'about': `<h2>Introducing TANM — Timeless by Design. Crafted to Last.</h2>\n\n<p>At TANM, we believe that true luxury lies in the details. Every accessory should be more than just something you carry or wear — it should reflect your personality, complement your style, and become a part of your everyday story.</p>\n\n<p>TANM brings you a thoughtfully curated collection of 100% genuine leather bags, wallets, belts and more designed for those who appreciate timeless aesthetics, understated elegance, and versatile style.</p>\n\n<p>From everyday essentials to statement pieces, our designs combine functionality with refined craftsmanship, making them perfect for modern lifestyles and special occasions alike.</p>\n\n<p>We believe in creating accessories that go beyond fleeting trends — pieces you can cherish, style, and carry with confidence.</p>`,
+                                'privacy-policy': `<h2>Privacy Policy</h2>\n<p>At TANM, we respect and safeguard the privacy of every client. This policy explains how we collect, store, and utilize your personal information.</p>\n\n<h3>1. Information We Collect</h3>\n<p>We collect your name, email, phone number, shipping address, and transaction records required to process and deliver your orders securely.</p>\n\n<h3>2. Payment Security</h3>\n<p>All transactions are protected by 256-bit SSL encryption via RBI-compliant gateways. TANM never stores your full card numbers, CVVs, or bank credentials.</p>\n\n<h3>3. Data Protection</h3>\n<p>We never sell or rent your personal details to third parties. Information is shared only with trusted logistics and fulfillment partners necessary to deliver your pieces.</p>`,
+                              }[pageForm.slug];
+                              if (defaultTemplate) {
+                                setPageForm((prev) => ({ ...prev, content: defaultTemplate }));
+                                toast.success('Loaded starting template text!');
+                              } else {
+                                toast.info('No pre-built template for this slug. Write your custom content below.');
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface text-xs font-semibold cursor-pointer"
+                          >
+                            Load Template Text
+                          </button>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleSavePage} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div>
+                            <label className="block font-semibold mb-1 text-on-surface-variant text-[11px] uppercase tracking-wider">
+                              Page Title
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={pageForm.title}
+                              onChange={(e) => setPageForm({ ...pageForm, title: e.target.value })}
+                              placeholder="e.g. Shipping & Returns"
+                              className="w-full bg-surface border border-outline/25 rounded p-2.5 text-on-surface focus:outline-none focus:border-primary text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold mb-1 text-on-surface-variant text-[11px] uppercase tracking-wider">
+                              URL Slug (Identifier)
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={pageForm.slug}
+                              onChange={(e) => setPageForm({ ...pageForm, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                              placeholder="e.g. shipping-returns"
+                              className="w-full bg-surface border border-outline/25 rounded p-2.5 text-on-surface font-mono text-xs focus:outline-none focus:border-primary"
+                            />
+                            <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
+                              Direct storefront slug: /api/cms/pages/{pageForm.slug || 'slug'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold mb-1 text-on-surface-variant text-[11px] uppercase tracking-wider">
+                              Storefront Visibility
+                            </label>
+                            <select
+                              value={pageForm.status}
+                              onChange={(e) => setPageForm({ ...pageForm, status: e.target.value })}
+                              className="w-full bg-surface border border-outline/25 rounded p-2.5 text-on-surface text-xs focus:outline-none focus:border-primary"
+                            >
+                              <option value="PUBLISHED">PUBLISHED (Live on Storefront)</option>
+                              <option value="DRAFT">DRAFT (Hidden / Preview Only)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Page Content Editor */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block font-semibold text-on-surface-variant text-[11px] uppercase tracking-wider">
+                              Page Body Content (HTML or Markdown)
+                            </label>
+                            <span className="text-[10px] font-mono text-on-surface-variant/70">
+                              {pageForm.content?.length || 0} characters
+                            </span>
+                          </div>
+                          <textarea
+                            rows={16}
+                            required
+                            value={pageForm.content}
+                            onChange={(e) => setPageForm({ ...pageForm, content: e.target.value })}
+                            placeholder="Write or paste your custom page content here (supports HTML formatting tags)..."
+                            className="w-full bg-surface border border-outline/25 rounded p-3 text-on-surface font-mono text-xs leading-relaxed focus:outline-none focus:border-primary"
+                          />
+                        </div>
+
+                        {/* Form Actions */}
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant/15">
+                          <button
+                            type="button"
+                            onClick={() => setEditingCmsPage(null)}
+                            className="px-5 py-2.5 rounded border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface text-xs font-semibold cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={savingPage}
+                            className="bg-primary text-surface px-8 py-2.5 rounded font-bold uppercase tracking-wider text-xs hover:bg-primary-container transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                          >
+                            {savingPage ? 'Saving & Publishing...' : 'Save & Publish Page'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    /* Pages Cards List */
+                    <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+                        <div>
+                          <h3 className="font-headline-md text-base text-primary font-bold">
+                            Official Maison & Policy Pages
+                          </h3>
+                          <p className="text-on-surface-variant text-[11px]">
+                            These pages are dynamically served across the storefront and linked from the footer.
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono text-on-surface-variant bg-surface px-2.5 py-1 rounded border border-outline-variant/20">
+                          3 Standard Pages Configured
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                          {
+                            slug: 'shipping-returns',
+                            title: 'Shipping & Returns',
+                            category: 'Client Services',
+                            desc: '16-point Exchange Policy, COD restrictions, and 50% advance custom order rules.',
+                            icon: 'local_shipping',
+                          },
+                          {
+                            slug: 'about',
+                            title: 'About TANM',
+                            category: 'The Maison',
+                            desc: 'Brand story, 100% genuine leather craftsmanship, and core guiding pillars.',
+                            icon: 'storefront',
+                          },
+                          {
+                            slug: 'privacy-policy',
+                            title: 'Privacy Policy',
+                            category: 'Legal & Compliance',
+                            desc: 'Data collection, 256-bit SSL payment protection, and customer privacy rights.',
+                            icon: 'policy',
+                          },
+                        ].map((systemPage) => {
+                          const dbPage = cmsPages.find((p) => p.slug === systemPage.slug);
+                          const isCustomized = !!dbPage;
+
+                          return (
+                            <div
+                              key={systemPage.slug}
+                              className="p-6 rounded-xl bg-surface-container-low border border-outline-variant/15 hover:border-primary/20 transition-all flex flex-col justify-between shadow-sm"
+                            >
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">
+                                    {systemPage.category}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                      isCustomized
+                                        ? 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/30'
+                                        : 'bg-primary/5 text-primary border border-primary/15'
+                                    }`}
+                                  >
+                                    {isCustomized ? '● Custom CMS Active' : '★ Master Template'}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-full bg-primary/5 text-primary flex items-center justify-center flex-shrink-0">
+                                    <span className="material-symbols-outlined text-[18px]">{systemPage.icon}</span>
+                                  </div>
+                                  <h4 className="font-serif font-bold text-base text-primary">
+                                    {dbPage?.title || systemPage.title}
+                                  </h4>
+                                </div>
+
+                                <p className="text-on-surface-variant text-[11px] leading-relaxed">
+                                  {systemPage.desc}
+                                </p>
+
+                                <div className="pt-2 font-mono text-[10px] text-on-surface-variant/70 flex items-center gap-1.5">
+                                  <span>Slug:</span>
+                                  <code className="bg-surface px-1.5 py-0.5 rounded border border-outline-variant/20 text-primary font-bold">
+                                    /{systemPage.slug}
+                                  </code>
+                                </div>
+                              </div>
+
+                              <div className="pt-6 border-t border-outline-variant/15 mt-6 flex items-center justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditPage(dbPage || systemPage)}
+                                  className="flex-1 py-2 rounded bg-primary text-surface text-xs font-bold uppercase tracking-wider hover:bg-primary-container transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  Edit Content
+                                </button>
+                                {isCustomized && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePage(dbPage.id, dbPage.title)}
+                                    className="p-2 text-error hover:bg-error/10 rounded transition-all cursor-pointer"
+                                    title="Revert to master template"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">restore</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Additional custom created pages */}
+                        {cmsPages
+                          .filter((p) => !['shipping-returns', 'about', 'privacy-policy'].includes(p.slug))
+                          .map((customPage) => (
+                            <div
+                              key={customPage.id}
+                              className="p-6 rounded-xl bg-surface-container-low border border-outline-variant/15 hover:border-primary/20 transition-all flex flex-col justify-between shadow-sm"
+                            >
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">
+                                    Custom Page
+                                  </span>
+                                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
+                                    {customPage.status}
+                                  </span>
+                                </div>
+
+                                <h4 className="font-serif font-bold text-base text-primary">
+                                  {customPage.title}
+                                </h4>
+
+                                <div className="font-mono text-[10px] text-on-surface-variant/70 flex items-center gap-1.5">
+                                  <span>Slug:</span>
+                                  <code className="bg-surface px-1.5 py-0.5 rounded border border-outline-variant/20 text-primary font-bold">
+                                    /{customPage.slug}
+                                  </code>
+                                </div>
+                              </div>
+
+                              <div className="pt-6 border-t border-outline-variant/15 mt-6 flex items-center justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditPage(customPage)}
+                                  className="flex-1 py-2 rounded bg-primary text-surface text-xs font-bold uppercase tracking-wider hover:bg-primary-container transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  Edit Content
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePage(customPage.id, customPage.title)}
+                                  className="p-2 text-error hover:bg-error/10 rounded transition-all cursor-pointer"
+                                  title="Delete page"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -2085,7 +2956,7 @@ export default function AdminPortal() {
       {selectedAdminOrder && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex justify-center items-center p-4 overflow-y-auto">
           <div className="bg-surface w-full max-w-4xl rounded-lg shadow-2xl overflow-y-auto max-h-[90vh] border border-outline-variant/20 relative p-6 md:p-10 text-xs text-left">
-            
+
             {/* Header */}
             <div className="flex justify-between items-start border-b border-outline-variant/20 pb-6 mb-6">
               <div>
@@ -2113,22 +2984,20 @@ export default function AdminPortal() {
               <div className="flex items-center gap-4 flex-wrap">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-on-surface-variant/70 block mb-1">Payment Status</span>
-                  <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    selectedAdminOrder.paymentStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' :
+                  <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${selectedAdminOrder.paymentStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' :
                     selectedAdminOrder.paymentStatus === 'FAILED' ? 'bg-error/10 text-error border border-error/30' :
-                    'bg-amber-500/10 text-amber-700 border border-amber-500/30'
-                  }`}>
+                      'bg-amber-500/10 text-amber-700 border border-amber-500/30'
+                    }`}>
                     {selectedAdminOrder.paymentStatus || 'PENDING'}
                   </span>
                 </div>
 
                 <div>
                   <span className="text-[10px] uppercase font-bold text-on-surface-variant/70 block mb-1">Fulfillment Status</span>
-                  <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    selectedAdminOrder.fulfillmentStatus === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' :
+                  <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${selectedAdminOrder.fulfillmentStatus === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' :
                     selectedAdminOrder.fulfillmentStatus === 'CANCELLED' ? 'bg-error/10 text-error border border-error/30' :
-                    'bg-primary/10 text-primary border border-primary/30'
-                  }`}>
+                      'bg-primary/10 text-primary border border-primary/30'
+                    }`}>
                     {selectedAdminOrder.fulfillmentStatus}
                   </span>
                 </div>
@@ -2153,7 +3022,7 @@ export default function AdminPortal() {
 
             {/* Customer & Address Information Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              
+
               {/* Customer Profile Card */}
               <div className="bg-surface-container-lowest p-5 rounded border border-outline-variant/20 space-y-2">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-primary border-b border-outline-variant/10 pb-2 mb-3">
@@ -2267,7 +3136,7 @@ export default function AdminPortal() {
 
             {/* Financial Calculation & Timeline Grid */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start mb-8">
-              
+
               {/* Order Audit Timeline Log */}
               <div className="md:col-span-7 bg-surface-container-lowest p-5 rounded border border-outline-variant/20">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-primary border-b border-outline-variant/10 pb-2 mb-4">

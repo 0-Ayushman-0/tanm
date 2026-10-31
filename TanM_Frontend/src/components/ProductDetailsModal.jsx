@@ -98,7 +98,7 @@ export default function ProductDetailsModal({
 
   const images = sortedImageObjects.length > 0
     ? sortedImageObjects.map(img => img.imageUrl)
-    : [product.mainImageUrl || 'https://via.placeholder.com/600x800'];
+    : [product.mainImageUrl || 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&q=80&w=800'];
 
   const isOutOfStock = !product.stockQuantity || product.stockQuantity <= 0;
   const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;

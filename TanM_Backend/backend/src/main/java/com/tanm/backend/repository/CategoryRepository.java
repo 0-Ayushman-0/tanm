@@ -12,6 +12,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     boolean existsByName(String name);
     boolean existsBySlug(String slug);
     java.util.List<Category> findAllByIsDeletedFalseOrderByDisplayOrderAscIdAsc();
+    java.util.List<Category> findAllByIsDeletedFalseAndIsActiveTrueAndIsSignatureCollectionTrueOrderByDisplayOrderAscIdAsc();
     org.springframework.data.domain.Page<Category> findByIsDeletedFalse(org.springframework.data.domain.Pageable pageable);
     Optional<Category> findByIdAndIsDeletedFalse(Long id);
     Optional<Category> findBySlugAndIsDeletedFalse(String slug);

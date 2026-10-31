@@ -24,4 +24,7 @@ public class CategoryCreateRequest {
 
     @Builder.Default
     private Integer displayOrder = 0;
+
+    @Builder.Default
+    private Boolean isSignatureCollection = false;
 }
